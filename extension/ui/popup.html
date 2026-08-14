@@ -1,0 +1,28 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>Splendid Bookmarks</title>
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body class="popup">
+    <h1 data-i18n="actionTitle">Splendid Bookmarks</h1>
+    <p class="badge badge-safe" data-i18n="ui.popup.badge">
+      Move first, delete last
+    </p>
+    <p class="muted" data-i18n="ui.popup.note">
+      This build moves bookmarks and folders, and can rename a bookmark when a
+      loaded plan asks for it. It never changes a URL or renames a folder, and
+      it only deletes items you have sent to the Trash and confirmed.
+    </p>
+    <button
+      id="open-manager"
+      type="button"
+      class="primary"
+      data-i18n="ui.popup.open"
+    >
+      Open manager
+    </button>
+    <script type="module" src="popup.js"></script>
+  </body>
+</html>

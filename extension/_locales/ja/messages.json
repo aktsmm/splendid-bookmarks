@@ -1,0 +1,11 @@
+{
+  "extensionName": {
+    "message": "Splendid Bookmarks"
+  },
+  "extensionDescription": {
+    "message": "Dry Run とバックアップ検証のうえで移動を適用します。Trash へ送った項目はバッチ単位で元の並び順のまま戻せます。永続削除は確認付きの別ステップです。"
+  },
+  "actionTitle": {
+    "message": "Splendid Bookmarks"
+  }
+}

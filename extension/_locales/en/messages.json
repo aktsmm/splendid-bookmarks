@@ -1,0 +1,11 @@
+{
+  "extensionName": {
+    "message": "Splendid Bookmarks"
+  },
+  "extensionDescription": {
+    "message": "Tidy bookmarks safely: dry run, verified backup, rollback, a reversible Trash folder, and a confirmed two-step delete."
+  },
+  "actionTitle": {
+    "message": "Splendid Bookmarks"
+  }
+}

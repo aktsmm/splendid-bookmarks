@@ -1,0 +1,10 @@
+node_modules/
+dist/
+*.zip
+tmp/
+exports/
+*.local.json
+
+# Local agent assets: synced from elsewhere, not part of the published extension.
+.github/skills/
+AGENTS.md

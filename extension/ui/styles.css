@@ -1,0 +1,251 @@
+:root {
+  color-scheme: light dark;
+  --fg: #1b1b1f;
+  --muted: #5f6368;
+  --bg: #ffffff;
+  --panel: #f6f7f9;
+  --border: #d6d9de;
+  --accent: #1a73e8;
+  --accent-fg: #ffffff;
+  --ok: #137333;
+  --warn: #8f5a00;
+  --error: #c5221f;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --fg: #e8eaed;
+    --muted: #9aa0a6;
+    --bg: #1f1f23;
+    --panel: #2a2a30;
+    --border: #3c4043;
+    /* The light-mode accents fall to 2.8-3.6:1 on this background. */
+    --accent: #8ab4f8;
+    --accent-fg: #1f1f23;
+    --ok: #81c995;
+    --warn: #fdd663;
+    --error: #f28b82;
+  }
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0 auto;
+  padding: 24px;
+  max-width: 1100px;
+  font:
+    14px/1.6 "Segoe UI",
+    "Yu Gothic UI",
+    system-ui,
+    sans-serif;
+  color: var(--fg);
+  background: var(--bg);
+}
+
+body.popup {
+  width: 280px;
+  max-width: none;
+  padding: 16px;
+  text-align: center;
+}
+
+h1 {
+  font-size: 20px;
+  margin: 0 0 8px;
+}
+
+.header-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.locale-picker {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+}
+
+h2 {
+  font-size: 16px;
+  margin: 0 0 12px;
+}
+
+h3,
+h4 {
+  font-size: 13px;
+  margin: 16px 0 6px;
+  overflow-wrap: anywhere;
+}
+
+section {
+  margin-bottom: 28px;
+  padding: 16px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+}
+
+.badge {
+  display: inline-block;
+  padding: 3px 10px;
+  border-radius: 999px;
+  font-size: 12px;
+}
+
+.badge-safe {
+  background: rgba(19, 115, 51, 0.12);
+  color: var(--ok);
+}
+
+.muted {
+  color: var(--muted);
+}
+
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+  margin-bottom: 12px;
+}
+
+button,
+select,
+input[type="file"] {
+  font: inherit;
+  padding: 6px 12px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: var(--bg);
+  color: var(--fg);
+}
+
+button:not(:disabled) {
+  cursor: pointer;
+}
+
+button.primary:not(:disabled) {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: var(--accent-fg);
+}
+
+button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.inline-action {
+  padding: 2px 10px;
+  margin-bottom: 12px;
+  font-size: 0.9em;
+}
+
+/* The selection and keeper rows. Without this they render as a default list:
+   bullet markers, browser indent, and the title run together with the path. */
+.check-list {
+  list-style: none;
+  margin: 0 0 12px;
+  padding: 0;
+}
+
+.check-list label {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: baseline;
+  padding: 3px 0;
+}
+
+.check-list label span {
+  /* A long unbroken title would otherwise refuse to shrink and stretch the row. */
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.check-list input {
+  flex: none;
+}
+
+.check-list .muted {
+  font-size: 0.9em;
+}
+
+:where(a, button, select, textarea, input):focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+.status {
+  min-height: 1.6em;
+  font-size: 13px;
+  /* `break-all` would split ordinary words; this only breaks what would overflow. */
+  overflow-wrap: anywhere;
+}
+
+.agent-output {
+  display: block;
+  width: 100%;
+  min-height: 220px;
+  margin-top: 6px;
+  padding: 8px;
+  font-family: "Cascadia Code", Consolas, monospace;
+  font-size: 12px;
+  line-height: 1.5;
+  color: var(--fg);
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  resize: vertical;
+}
+
+.status[data-kind="ok"] {
+  color: var(--ok);
+}
+
+.status[data-kind="warn"] {
+  color: var(--warn);
+}
+
+.status[data-kind="error"] {
+  color: var(--error);
+}
+
+.panel:not(:empty) {
+  margin-top: 12px;
+  padding: 12px;
+  background: var(--panel);
+  border-radius: 6px;
+  overflow-x: auto;
+}
+
+table {
+  border-collapse: collapse;
+  width: 100%;
+  margin-bottom: 8px;
+  font-size: 12px;
+}
+
+th,
+td {
+  border: 1px solid var(--border);
+  padding: 4px 8px;
+  text-align: left;
+  vertical-align: top;
+  overflow-wrap: anywhere;
+}
+
+th {
+  background: rgba(127, 127, 127, 0.12);
+  white-space: nowrap;
+}
+
+code {
+  font-family: "Cascadia Code", Consolas, monospace;
+}

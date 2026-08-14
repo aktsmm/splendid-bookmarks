@@ -1,0 +1,394 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>Splendid Bookmarks</title>
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body>
+    <header>
+      <div class="header-row">
+        <h1 data-i18n="actionTitle">Splendid Bookmarks</h1>
+        <div class="locale-picker">
+          <label for="ui-locale" data-i18n="ui.language">Language</label>
+          <select id="ui-locale">
+            <option value="en" lang="en">English</option>
+            <option value="ja" lang="ja">日本語</option>
+          </select>
+        </div>
+      </div>
+      <p class="badge badge-safe" data-i18n="ui.badge.writeScope">
+        Moves, renames a bookmark on request, creates one Trash folder, deletes
+        only what you confirm
+      </p>
+      <p class="muted" data-i18n="ui.intro">Work through the steps in order.</p>
+    </header>
+
+    <section>
+      <h2 data-i18n="section.quickstart.title">Start here</h2>
+      <p class="muted" data-i18n="section.quickstart.note">
+        Load the tree and save a snapshot in one step.
+      </p>
+      <div class="actions">
+        <button
+          id="quick-start"
+          type="button"
+          class="primary"
+          data-i18n="section.quickstart.run"
+        >
+          Load the tree and save a backup
+        </button>
+      </div>
+    </section>
+
+    <section>
+      <h2 data-i18n="section.tree.title">1. Live tree</h2>
+      <div class="actions">
+        <button
+          id="load-tree"
+          type="button"
+          class="primary"
+          data-i18n="section.tree.load"
+        >
+          Load tree
+        </button>
+        <button
+          id="export-tree"
+          type="button"
+          disabled
+          data-i18n="section.tree.export"
+        >
+          Export snapshot
+        </button>
+      </div>
+      <div id="tree-status" class="status" role="status" tabindex="-1"></div>
+      <div id="tree-summary" class="panel"></div>
+    </section>
+
+    <section>
+      <h2 data-i18n="section.duplicates.title">2. Duplicate report</h2>
+      <p class="muted" data-i18n="section.duplicates.hint">
+        Pick the one copy to keep in each group, then send the rest to step 3.
+      </p>
+      <div class="actions">
+        <label for="dup-mode" data-i18n="section.duplicates.mode"
+          >Detection mode</label
+        >
+        <select id="dup-mode">
+          <option
+            value="normalized"
+            data-i18n="section.duplicates.mode.normalized"
+          >
+            Normalized URL
+          </option>
+          <option value="exact" data-i18n="section.duplicates.mode.exact">
+            Exact URL
+          </option>
+        </select>
+        <button
+          id="find-duplicates"
+          type="button"
+          disabled
+          data-i18n="section.duplicates.run"
+        >
+          Find duplicates
+        </button>
+        <button
+          id="send-duplicates"
+          type="button"
+          disabled
+          data-i18n="section.duplicates.send"
+        >
+          Send the rest to step 3
+        </button>
+      </div>
+      <div id="duplicates-status" class="status" role="status"></div>
+      <div id="duplicates" class="panel"></div>
+    </section>
+
+    <section>
+      <h2 data-i18n="section.plan.title">3. Moves to apply</h2>
+      <p class="muted" data-i18n="section.plan.note">
+        Pick the moves yourself, or load a plan an agent produced. Either way
+        the same Dry Run checks them against the live tree.
+      </p>
+
+      <h3 data-i18n="section.plan.manual">Pick the moves yourself</h3>
+      <div class="actions">
+        <label for="builder-source" data-i18n="section.plan.source"
+          >Look in</label
+        >
+        <select id="builder-source" disabled>
+          <option value="" data-i18n="section.agent.scope.all">
+            Everything in the profile
+          </option>
+        </select>
+        <label for="builder-filter" data-i18n="section.plan.filter"
+          >Filter by title or URL</label
+        >
+        <input id="builder-filter" type="search" disabled />
+      </div>
+      <div class="actions">
+        <label for="builder-destination" data-i18n="section.plan.destination"
+          >Move them into</label
+        >
+        <select id="builder-destination" disabled>
+          <option value="" data-i18n="section.plan.destination.none">
+            Choose a folder
+          </option>
+        </select>
+        <button
+          id="build-plan"
+          type="button"
+          disabled
+          data-i18n="section.plan.build"
+        >
+          Use this selection
+        </button>
+        <button
+          id="clear-selection"
+          type="button"
+          disabled
+          data-i18n="section.plan.clear"
+        >
+          Clear selection
+        </button>
+      </div>
+      <div id="builder-status" class="status" role="status"></div>
+      <div id="builder-panel" class="panel"></div>
+
+      <h3 data-i18n="section.plan.fromFile">Load an agent plan</h3>
+      <div class="actions">
+        <label for="plan-file" data-i18n="section.plan.file"
+          >Agent plan file (JSON)</label
+        >
+        <input
+          id="plan-file"
+          type="file"
+          accept="application/json,.json"
+          disabled
+        />
+        <button
+          id="dry-run"
+          type="button"
+          class="primary"
+          disabled
+          data-i18n="section.plan.run"
+        >
+          Validate / Dry Run
+        </button>
+      </div>
+      <div id="plan-status" class="status" role="status"></div>
+      <div id="dry-run-result" class="panel"></div>
+    </section>
+
+    <section>
+      <h2 data-i18n="section.apply.title">4. Apply</h2>
+      <p class="muted" data-i18n="section.apply.note">
+        Apply moves only the operations the Dry Run cleared, one at a time, and
+        stops at the first sign that anything else changed the bookmarks.
+      </p>
+      <div class="actions">
+        <label for="backup-file" data-i18n="section.apply.backup"
+          >Re-select the snapshot you exported in step 1</label
+        >
+        <input
+          id="backup-file"
+          type="file"
+          accept="application/json,.json"
+          disabled
+        />
+      </div>
+      <div class="actions">
+        <button
+          id="apply-moves"
+          type="button"
+          class="primary"
+          disabled
+          data-i18n="section.apply.button.apply"
+        >
+          Apply approved moves
+        </button>
+        <button
+          id="verify-result"
+          type="button"
+          disabled
+          data-i18n="section.apply.button.verify"
+        >
+          Verify result
+        </button>
+        <button
+          id="rollback-batch"
+          type="button"
+          disabled
+          data-i18n="section.apply.button.rollback"
+        >
+          Roll back last batch
+        </button>
+      </div>
+      <div id="apply-status" class="status" role="status" tabindex="-1"></div>
+      <div id="apply-result" class="panel"></div>
+    </section>
+
+    <section>
+      <h2 data-i18n="section.restore.title">5. Restore from a snapshot</h2>
+      <p class="muted" data-i18n="section.restore.note">
+        Works even after the extension has been reinstalled: the snapshot file
+        is the only input. Every node is matched individually before it moves.
+      </p>
+      <div class="actions">
+        <label for="restore-file" data-i18n="section.restore.file"
+          >Snapshot file (JSON)</label
+        >
+        <input
+          id="restore-file"
+          type="file"
+          accept="application/json,.json"
+          disabled
+        />
+        <button
+          id="run-restore"
+          type="button"
+          disabled
+          data-i18n="section.restore.run"
+        >
+          Restore positions
+        </button>
+      </div>
+      <div id="restore-status" class="status" role="status" tabindex="-1"></div>
+      <div id="restore-result" class="panel"></div>
+    </section>
+
+    <section>
+      <h2 data-i18n="section.trash.title">6. Trash</h2>
+      <p class="muted" data-i18n="section.trash.note">
+        Sending to Trash moves bookmarks into a folder you choose. Nothing is
+        deleted, and a whole batch can be put back in its original order while
+        the items are still there.
+      </p>
+
+      <h3 data-i18n="section.trash.folder">Trash folder</h3>
+      <div class="actions">
+        <label for="trash-folder" data-i18n="section.trash.use">Use</label>
+        <select id="trash-folder" disabled>
+          <option value="" data-i18n="section.trash.none">
+            Choose a folder
+          </option>
+        </select>
+      </div>
+      <div class="actions">
+        <label for="trash-parent" data-i18n="section.trash.createIn"
+          >Or create one in</label
+        >
+        <select id="trash-parent" disabled>
+          <option value="" data-i18n="section.trash.none">
+            Choose a folder
+          </option>
+        </select>
+        <label for="trash-title" data-i18n="section.trash.name">Named</label>
+        <input id="trash-title" type="text" value="Trash" disabled />
+        <button
+          id="create-trash-folder"
+          type="button"
+          disabled
+          data-i18n="section.trash.create"
+        >
+          Create it
+        </button>
+      </div>
+
+      <h3 data-i18n="section.trash.actions">Send and put back</h3>
+      <div class="actions">
+        <button
+          id="send-to-trash"
+          type="button"
+          class="primary"
+          disabled
+          data-i18n="section.trash.send"
+        >
+          Send the selection from step 3 to Trash
+        </button>
+        <button
+          id="trash-restore-batch"
+          type="button"
+          disabled
+          data-i18n="section.trash.restore"
+        >
+          Put the last batch back
+        </button>
+        <button
+          id="trash-forget"
+          type="button"
+          disabled
+          data-i18n="section.trash.forget"
+        >
+          Forget the recovery records
+        </button>
+      </div>
+
+      <h3 data-i18n="section.trash.empty">Delete for good</h3>
+      <p class="muted" data-i18n="section.trash.emptyNote">
+        This cannot be undone. Only items this extension put in the Trash folder
+        are deleted, one at a time, and the run stops at the first item that no
+        longer matches its record. A verified backup from step 1 is required.
+      </p>
+      <div class="actions">
+        <label for="empty-trash-confirm">
+          <input id="empty-trash-confirm" type="checkbox" disabled />
+          <span data-i18n="section.trash.emptyConfirm"
+            >I understand these bookmarks will be gone</span
+          >
+        </label>
+        <button
+          id="empty-trash"
+          type="button"
+          disabled
+          data-i18n="section.trash.emptyRun"
+        >
+          Delete the trashed items for good
+        </button>
+      </div>
+      <div id="trash-status" class="status" role="status" tabindex="-1"></div>
+      <div id="trash-panel" class="panel"></div>
+    </section>
+
+    <section>
+      <h2 data-i18n="section.agent.title">7. AI agent handoff (optional)</h2>
+      <p class="muted" data-i18n="section.agent.note">
+        Optional. Steps 1-5 work without an agent.
+      </p>
+      <div class="actions">
+        <label for="agent-scope" data-i18n="section.agent.scope"
+          >Bookmarks to place</label
+        >
+        <select id="agent-scope" disabled>
+          <option value="" data-i18n="section.agent.scope.all">
+            Everything in the profile
+          </option>
+        </select>
+        <button
+          id="export-agent-context"
+          type="button"
+          disabled
+          data-i18n="section.agent.export"
+        >
+          Export agent context (JSON)
+        </button>
+      </div>
+      <div id="agent-status" class="status" role="status"></div>
+      <div id="agent-summary" class="panel"></div>
+      <div id="agent-prompt-block">
+        <label
+          for="agent-prompt"
+          class="muted"
+          data-i18n="section.agent.copyHint"
+        >
+          Select the text below and copy it yourself.
+        </label>
+        <textarea id="agent-prompt" class="agent-output" readonly></textarea>
+      </div>
+    </section>
+
+    <script type="module" src="options.js"></script>
+  </body>
+</html>

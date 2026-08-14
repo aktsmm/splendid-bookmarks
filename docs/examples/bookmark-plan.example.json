@@ -1,0 +1,45 @@
+{
+  "version": 2,
+  "generatedAt": "2026-08-13T00:00:00.000Z",
+  "generatedBy": "example",
+  "notes": "Illustrative only. Regenerate against the live tree; ids are profile-specific.",
+  "operations": [
+    {
+      "opId": "op-0001",
+      "type": "move",
+      "bookmarkId": "1234",
+      "expectedTitle": "chrome.bookmarks | Chrome Extensions",
+      "expectedUrl": "https://developer.chrome.com/docs/extensions/reference/api/bookmarks",
+      "currentPath": [
+        "その他のブックマーク",
+        "chrome.bookmarks | Chrome Extensions"
+      ],
+      "destinationPath": ["ブックマーク バー", "Dev", "Browser Extensions"],
+      "destinationFolderId": "5678",
+      "reason": "Chrome 拡張機能の公式 API リファレンス",
+      "confidence": 0.95
+    },
+    {
+      "opId": "op-0002",
+      "type": "move",
+      "bookmarkId": "1235",
+      "expectedTitle": "料理メモ",
+      "expectedUrl": null,
+      "currentPath": ["その他のブックマーク", "料理メモ"],
+      "destinationPath": ["ブックマーク バー", "Life"],
+      "reason": "技術以外のフォルダを Life 配下へ集約",
+      "confidence": 0.7
+    },
+    {
+      "opId": "op-0003",
+      "type": "update",
+      "bookmarkId": "1236",
+      "expectedTitle": "無題のドキュメント",
+      "expectedUrl": "https://learn.microsoft.com/ja-jp/azure/",
+      "currentPath": ["ブックマーク バー", "Dev", "無題のドキュメント"],
+      "newTitle": "Azure ドキュメント",
+      "reason": "タイトルが中身を表していない",
+      "confidence": 0.85
+    }
+  ]
+}

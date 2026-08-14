@@ -1,0 +1,17 @@
+{
+  "name": "splendid-bookmarks",
+  "version": "0.4.0",
+  "private": true,
+  "type": "module",
+  "description": "Local bookmark tidier with dry run, verified backup, rollback, a reversible Trash and a confirmed two-step delete (Chrome/Edge MV3, unpacked only).",
+  "scripts": {
+    "test": "node --test \"tests/**/*.test.js\"",
+    "check:store": "node scripts/check-store-readiness.mjs",
+    "check:skills": "node scripts/check-skill-docs.mjs",
+    "pilot": "node scripts/run-pilot.mjs",
+    "scale": "node scripts/run-scale.mjs"
+  },
+  "engines": {
+    "node": ">=20"
+  }
+}
