@@ -34,6 +34,15 @@ import {
 const WORK = join(ROOT, "tmp", "pilot");
 const SIGNIN_PAUSE = process.env.PILOT_SIGNIN_PAUSE === "1";
 const REQUIRE_BOUNDARY = process.env.PILOT_REQUIRE_BOUNDARY === "1";
+// Release verification loads the unpacked build, not the working tree, so the
+// artifact that goes to the store is the artifact that was driven here.
+const EXTENSION_DIR = (() => {
+  const at = process.argv.indexOf("--extension-dir");
+  if (at === -1) return undefined;
+  const value = process.argv[at + 1];
+  if (!value) throw new Error("--extension-dir needs a path");
+  return value;
+})();
 // Every node this run creates carries this tag, so the sweep at the end can find
 // its own fixtures by name when a create's id never came back over CDP, and can
 // never match a different run's.
@@ -91,6 +100,7 @@ try {
     record,
     sync: SIGNIN_PAUSE,
     dualStoreFlags: process.env.PILOT_DUAL_STORE_FLAGS === "1",
+    ...(EXTENSION_DIR ? { extensionDir: EXTENSION_DIR } : {}),
   });
   cleanup = session.cleanup;
   const {

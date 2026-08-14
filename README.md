@@ -281,6 +281,12 @@ npm run pilot   # 重複の隔離 → 適用 → ロールバック、Trash 往�
 npm run scale   # 5000 ブックマークを作って各段階を実測する
 ```
 
+既定では作業ツリーの `extension/` を読み込みます。リリース検証では、ストアへ上げるものと検証したものを一致させるため、`npm run zip` で作った zip を展開して `--extension-dir` で指定します。指定先に `manifest.json` が無ければブラウザーを起動せずに失敗します。
+
+```powershell
+npm run pilot -- --extension-dir <展開先>
+```
+
 `pilot` は判定を UI の文言ではなく `chrome.bookmarks.get` で読んだ実際の `parentId` で行います。永続削除のシナリオでは、削除対象が消えていること、隣のブックマークが残っていること、対象の receipt が `deleted` になっていること、確認チェックが自動でリセットされることを個別に確認します。fixture の名前には実行ごとの nonce（`pilot-<8 桁>-…`）が入り、終了時に必ず削除して、その nonce の付いたノードがツリーに残っていないことを確かめます。
 
 アカウント / ローカルの境界越えが拒否されることは、境界が 2 つ実在するプロファイルでしか確かめられないので、`PILOT_SIGNIN_PAUSE=1 npm run pilot` でサインイン待ちを挟む経路を用意しています。境界が 2 つ揃わなければ、観測値を名指して SKIP します（通ったことにしません）。**2026-08-14 の実測では `syncing:true` の 1 つしか観測できず、境界は未検証のままです。**
@@ -312,6 +318,15 @@ npm run check:store
 - プライバシー申告。この拡張機能は**全ブックマークのタイトルと URL を読み取ります**（外部送信はしません）
 - 掲載アセット（アイコン、スクリーンショット、カテゴリ、サポート窓口）
 
+アップロード用の zip は次で作ります。
+
+```powershell
+npm run zip:dry-run   # ゲートを通して、何が入るかだけ表示する
+npm run zip           # ゲートが通ったときだけ builds/ に書き出す
+```
+
+`npm test` と `npm run check:store` を先に走らせ、`package.json` と `manifest.json` の version 一致を確認してから `builds/splendid-bookmarks-v<version>.zip` を作り、同じ場所に収録ファイル一覧と SHA256 を残します。`builds/` は追跡しません（タグから作り直せるため）。
+
 ## Structure
 
 - [extension/manifest.json](extension/manifest.json) — MV3 マニフェスト（`bookmarks` と `storage` のみ、background なし）
@@ -322,3 +337,7 @@ npm run check:store
 - [extension/schemas/bookmark-plan.schema.json](extension/schemas/bookmark-plan.schema.json) — 計画 JSON の公開スキーマ（受け入れの判定自体は [extension/src/core/plan-schema.js](extension/src/core/plan-schema.js) の validator が行い、両者はテストで一致を固定する）
 - [docs/design.md](docs/design.md) — 設計と適用フェーズの安全ゲート
 - [docs/examples/bookmark-plan.example.json](docs/examples/bookmark-plan.example.json) — 計画ファイルの例
+
+## License
+
+[LICENSE](LICENSE) を参照してください。著作権者が定める独自ライセンスで、**オープンソースライセンスでも Creative Commons ライセンスでもありません**。表示・非営利・継承を条件に共有と改変を許諾し、AI / 機械学習の学習用途と、まとめリポジトリへの再配布は許諾の範囲外です。

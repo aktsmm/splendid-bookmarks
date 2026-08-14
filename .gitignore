@@ -5,6 +5,13 @@ tmp/
 exports/
 *.local.json
 
+# Release artifacts: rebuilt from the tagged source, never reviewed as a diff.
+builds/
+
+# Store screenshots are captured from a synthetic profile and uploaded by hand.
+submission-screenshots/*
+!submission-screenshots/README.md
+
 # Local agent assets: synced from elsewhere, not part of the published extension.
 .github/skills/
 AGENTS.md

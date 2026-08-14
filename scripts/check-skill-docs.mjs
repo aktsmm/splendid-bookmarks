@@ -20,7 +20,9 @@ const check = (label, ok, detail) =>
 // The skill assets are synced from a separate source and stay out of the
 // published repo, so a clone without them is expected rather than broken.
 if (!existsSync(skillsDir)) {
-  console.log(`SKIP  no skill assets at .github${sep}skills; nothing to check.`);
+  console.log(
+    `SKIP  no skill assets at .github${sep}skills; nothing to check.`,
+  );
   process.exit(0);
 }
 

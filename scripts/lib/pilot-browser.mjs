@@ -113,9 +113,18 @@ export async function launchPilotBrowser({
   record,
   sync = false,
   dualStoreFlags = false,
+  extensionDir = EXT,
   extraArgs = [],
   callTimeoutMs = 30000,
 }) {
+  // Resolved and proven here rather than at the load call: a missing or wrong
+  // directory otherwise surfaces as a page that never becomes ready.
+  const extension = resolve(extensionDir);
+  if (!existsSync(join(extension, "manifest.json"))) {
+    throw new Error(`no manifest.json under ${extension}`);
+  }
+  record?.("extension under test", extension);
+
   // A unique directory per run. A fixed path would have to be cleared before
   // launching, and that delete cannot tell a stale profile from one another run
   // is using right now.
@@ -132,7 +141,7 @@ export async function launchPilotBrowser({
       `--user-data-dir=${profile}`,
       // Port 0 makes the browser pick a free port and publish it in the profile.
       "--remote-debugging-port=0",
-      `--disable-extensions-except=${EXT}`,
+      `--disable-extensions-except=${extension}`,
       "--enable-unsafe-extension-debugging",
       "--no-first-run",
       "--no-default-browser-check",
@@ -203,7 +212,9 @@ export async function launchPilotBrowser({
 
     // Loaded after the endpoint is proven to be ours, so no unpacked extension
     // is ever pushed into a browser this process did not start.
-    const loaded = await browser.send("Extensions.loadUnpacked", { path: EXT });
+    const loaded = await browser.send("Extensions.loadUnpacked", {
+      path: extension,
+    });
     // A browser can accept the load and still leave the extension disabled, and
     // that shows up much later as a page that never becomes ready. Ask.
     let enabled = null;
