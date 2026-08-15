@@ -8,7 +8,11 @@
 import { existsSync, readFileSync, readdirSync, statSync } from "node:fs";
 import { join, relative, sep } from "node:path";
 import { fileURLToPath } from "node:url";
-import { claimsCannotDelete, claimsReadOnly, pastedListingCopy } from "./lib/listing-claims.mjs";
+import {
+  claimsCannotDelete,
+  claimsReadOnly,
+  pastedListingCopy,
+} from "./lib/listing-claims.mjs";
 
 const root = fileURLToPath(new URL("..", import.meta.url));
 const extensionDir = join(root, "extension");
