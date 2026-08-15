@@ -12,6 +12,7 @@
     "zip": "pwsh -NoProfile -ExecutionPolicy Bypass -File scripts/New-ExtensionZip.ps1",
     "zip:dry-run": "pwsh -NoProfile -ExecutionPolicy Bypass -File scripts/New-ExtensionZip.ps1 -DryRun",
     "pilot": "node scripts/run-pilot.mjs",
+    "screenshots": "node scripts/capture-store-screenshots.mjs",
     "scale": "node scripts/run-scale.mjs"
   },
   "engines": {

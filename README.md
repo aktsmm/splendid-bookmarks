@@ -327,6 +327,12 @@ npm run zip           # ゲートが通ったときだけ builds/ に書き出�
 
 `npm test` と `npm run check:store` を先に走らせ、`package.json` と `manifest.json` の version 一致を確認してから `builds/splendid-bookmarks-v<version>.zip` を作り、同じ場所に収録ファイル一覧と SHA256 を残します。`builds/` は追跡しません（タグから作り直せるため）。
 
+掲載用スクリーンショットは次で生成します。使い捨てプロファイルに合成ブックマークを撬き、ストアが要求する 1280x800 で取得します。**プロファイルにブックマークが 1 件でも存在したら、種まきも撮影も行わずに中断します**（実アカウントが同期されたプロファイルを公開掲載に写し込まないため）。
+
+```powershell
+npm run screenshots -- --extension-dir <展開先> --lang en
+```
+
 ## Structure
 
 - [extension/manifest.json](extension/manifest.json) — MV3 マニフェスト（`bookmarks` と `storage` のみ、background なし）
