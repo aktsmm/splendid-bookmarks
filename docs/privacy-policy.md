@@ -4,7 +4,10 @@ Last updated: 2026-08-13
 
 ## English
 
-**This extension does not collect, transmit, or sell any data.**
+**This extension sends nothing to the developer, to any server, or to any third party.**
+It does read your bookmarks, and it does keep a few small records on your own device. Both
+are itemised below, because "nothing leaves your computer" is not the same as "nothing is
+read or stored".
 
 ### What the extension reads
 
@@ -76,13 +79,16 @@ API, and it never contacts a website.
 
 ### Contact
 
-See the support link on the store listing.
+Use the issue tracker on the project repository, or the support link on the store listing
+once the extension is published there.
 
 ---
 
 ## 日本語
 
-**この拡張機能は、いかなるデータも収集・送信・販売しません。**
+**この拡張機能は、開発者・サーバー・第三者のいずれに対してもデータを送信しません。**
+ただし、ブックマークの読み取りと、お使いの端末内への小さな記録の保存は行います。いずれも
+以下に列挙します。「外部に出ない」ことと「読まない・保存しない」ことは別だからです。
 
 ### 読み取るもの
 
@@ -147,4 +153,4 @@ See the support link on the store listing.
 
 ### 連絡先
 
-ストア掲載ページのサポートリンクをご覧ください。
+プロジェクトリポジトリの issue、またはストア公開後は掲載ページのサポートリンクをご利用ください。
