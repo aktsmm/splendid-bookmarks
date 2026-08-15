@@ -7,6 +7,7 @@ import { fileURLToPath } from "node:url";
 import {
   claimsCannotDelete,
   claimsReadOnly,
+  pastedListingCopy,
 } from "../scripts/lib/listing-claims.mjs";
 
 const root = fileURLToPath(new URL("..", import.meta.url));
@@ -80,4 +81,38 @@ test("the shipped listing text makes neither claim", () => {
       `${locale} claims it cannot delete`,
     );
   }
+});
+
+test("only the pasted blocks are extracted, and CRLF fences still match", () => {
+  const markdown = [
+    "Guidance: this copy must not claim the extension is read-only.",
+    "",
+    "```text",
+    "Tidy your bookmarks.",
+    "```",
+    "",
+    "More guidance: it must not say it cannot delete bookmarks.",
+    "",
+    "```text",
+    "Deleting for good cannot be",
+    "undone.",
+    "```",
+  ].join("\r\n");
+
+  const flat = pastedListingCopy(markdown);
+
+  // The guidance names both forbidden claims; only the fenced copy is checked.
+  assert.equal(claimsReadOnly(flat), false);
+  assert.equal(claimsCannotDelete(flat), false);
+  // A phrase broken across a hard wrap has to survive the extraction.
+  assert.match(flat, /cannot be undone/);
+});
+
+test("a violation inside a pasted block is still caught", () => {
+  const markdown = "```text\r\nThis extension cannot delete anything.\r\n```";
+  assert.equal(claimsCannotDelete(pastedListingCopy(markdown)), true);
+});
+
+test("a draft with no pasted block yields nothing rather than a silent pass", () => {
+  assert.equal(pastedListingCopy("no fenced blocks here"), "");
 });

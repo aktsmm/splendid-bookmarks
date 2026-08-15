@@ -5,10 +5,10 @@
  * phase, and this script answers a different question — whether it could be
  * submitted at all. Exits non-zero while any BLOCK remains.
  */
-import { readFileSync, readdirSync, statSync } from "node:fs";
+import { existsSync, readFileSync, readdirSync, statSync } from "node:fs";
 import { join, relative, sep } from "node:path";
 import { fileURLToPath } from "node:url";
-import { claimsCannotDelete, claimsReadOnly } from "./lib/listing-claims.mjs";
+import { claimsCannotDelete, claimsReadOnly, pastedListingCopy } from "./lib/listing-claims.mjs";
 
 const root = fileURLToPath(new URL("..", import.meta.url));
 const extensionDir = join(root, "extension");
@@ -122,6 +122,43 @@ for (const locale of readdirSync(join(extensionDir, "_locales"))) {
     `${locale}: listing text does not claim it cannot delete`,
     !claimsCannotDelete(`${name} ${description}`),
     "the build can permanently delete a confirmed item from the Trash",
+  );
+}
+
+// --- Store listing copy ------------------------------------------------------
+// The text above is the manifest's, which is not what the reviewer reads. The
+// copy that goes into the dashboard lives here, so it gets the same predicates
+// instead of a promise that somebody proofread it.
+const listingCopyPath = join(root, "docs", "cws-listing.md");
+if (!existsSync(listingCopyPath)) {
+  check(
+    "store listing copy is drafted in the repository",
+    false,
+    "docs/cws-listing.md is missing",
+  );
+} else {
+  const flat = pastedListingCopy(readFileSync(listingCopyPath, "utf8"));
+  check(
+    "store listing copy is drafted in the repository",
+    flat.length > 0,
+    `docs/cws-listing.md, ${flat.length} characters of pasted copy`,
+  );
+  check(
+    "listing copy does not claim to be read-only",
+    !claimsReadOnly(flat),
+    "the build can move, create the one Trash folder, and delete from the Trash",
+  );
+  check(
+    "listing copy does not claim it cannot delete",
+    !claimsCannotDelete(flat),
+    "the build can permanently delete a confirmed item from the Trash",
+  );
+  // A reviewer reads the description, not the repository. If the two-step delete
+  // is not stated there, the listing is quietly softer than the build.
+  check(
+    "listing copy states that the permanent delete is irreversible",
+    /cannot be undone|irreversible|元に戻せません/i.test(flat),
+    "the irreversible step has to be visible to a reader of the listing",
   );
 }
 

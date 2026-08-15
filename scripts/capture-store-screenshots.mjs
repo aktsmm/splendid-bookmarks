@@ -35,12 +35,20 @@ const LANG = argOf("--lang") ?? "en";
 /** Obviously fictional, so a screenshot can never leak a real bookmark. */
 const SEED = [
   ["Docs", "MDN Web Docs", "https://developer.mozilla.org/"],
-  ["Docs", "Chrome Extensions", "https://developer.chrome.com/docs/extensions/"],
+  [
+    "Docs",
+    "Chrome Extensions",
+    "https://developer.chrome.com/docs/extensions/",
+  ],
   ["Docs", "Web.dev", "https://web.dev/"],
   ["Reading", "MDN Web Docs", "https://developer.mozilla.org/"],
   ["Reading", "Example Domain", "https://example.com/"],
   ["Reading", "Example Domain", "https://example.com/?utm_source=newsletter"],
-  ["Archive", "Chrome Extensions", "https://developer.chrome.com/docs/extensions/"],
+  [
+    "Archive",
+    "Chrome Extensions",
+    "https://developer.chrome.com/docs/extensions/",
+  ],
   ["Archive", "Example Domain", "https://example.com"],
 ];
 
@@ -137,7 +145,9 @@ try {
     const width = png.readUInt32BE(16);
     const height = png.readUInt32BE(20);
     if (width !== WIDTH || height !== HEIGHT) {
-      throw new Error(`${name}: captured ${width}x${height}, expected ${WIDTH}x${HEIGHT}`);
+      throw new Error(
+        `${name}: captured ${width}x${height}, expected ${WIDTH}x${HEIGHT}`,
+      );
     }
     const file = join(OUT_DIR, name);
     writeFileSync(file, png);
@@ -181,7 +191,10 @@ try {
   await scrollToSection("#trash-status");
   await capture("05-trash.png");
 
-  record("verdict", `CAPTURE PASS: 5 screenshots at ${WIDTH}x${HEIGHT} in submission-screenshots/`);
+  record(
+    "verdict",
+    `CAPTURE PASS: 5 screenshots at ${WIDTH}x${HEIGHT} in submission-screenshots/`,
+  );
 } catch (error) {
   failed = true;
   record("error", error.message);

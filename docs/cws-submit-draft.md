@@ -10,18 +10,18 @@ Source of truth for the artifact: `builds/splendid-bookmarks-v0.4.0.zip` (42 fil
 
 ## Store listing tab
 
-| Field | Value |
-| --- | --- |
-| Item name | `Splendid Bookmarks` |
-| Summary (132 char max) | see below |
-| Detailed description | see [cws-listing.md](cws-listing.md) |
-| Category | `Workflow & Planning` |
-| Language | `English` (plus a `日本語` locale in the listing) |
-| Store icon | `extension/icons/icon-128.png` (128x128) |
-| Screenshots | `submission-screenshots/01..05` at 1280x800, regenerated per submission |
-| Homepage URL | `https://github.com/aktsmm/splendid-bookmarks` |
-| Support URL | `https://github.com/aktsmm/splendid-bookmarks/issues` |
-| Mature content | No |
+| Field                  | Value                                                                   |
+| ---------------------- | ----------------------------------------------------------------------- |
+| Item name              | `Splendid Bookmarks`                                                    |
+| Summary (132 char max) | see below                                                               |
+| Detailed description   | see [cws-listing.md](cws-listing.md)                                    |
+| Category               | `Workflow & Planning`                                                   |
+| Language               | `English` (plus a `日本語` locale in the listing)                       |
+| Store icon             | `extension/icons/icon-128.png` (128x128)                                |
+| Screenshots            | `submission-screenshots/01..05` at 1280x800, regenerated per submission |
+| Homepage URL           | `https://github.com/aktsmm/splendid-bookmarks`                          |
+| Support URL            | `https://github.com/aktsmm/splendid-bookmarks/issues`                   |
+| Mature content         | No                                                                      |
 
 Summary:
 
@@ -76,17 +76,17 @@ fails the build if any network send appears in the extension source.
 
 ### Data usage — what to declare
 
-| Category | Declare | Why |
-| --- | --- | --- |
-| Personally identifiable information | No | never read |
-| Health information | No | never read |
-| Financial and payment information | No | never read |
-| Authentication information | No | never read |
-| Personal communications | No | never read |
-| Location | No | never read |
-| Web history | No | the `history` permission is not requested; bookmarks are not browsing history |
-| User activity | No | no clicks, keystrokes, or usage analytics are recorded |
-| Website content | **No** | the extension reads bookmark titles and URLs through the `bookmarks` API only, never page content, and nothing is transmitted |
+| Category                            | Declare | Why                                                                                                                           |
+| ----------------------------------- | ------- | ----------------------------------------------------------------------------------------------------------------------------- |
+| Personally identifiable information | No      | never read                                                                                                                    |
+| Health information                  | No      | never read                                                                                                                    |
+| Financial and payment information   | No      | never read                                                                                                                    |
+| Authentication information          | No      | never read                                                                                                                    |
+| Personal communications             | No      | never read                                                                                                                    |
+| Location                            | No      | never read                                                                                                                    |
+| Web history                         | No      | the `history` permission is not requested; bookmarks are not browsing history                                                 |
+| User activity                       | No      | no clicks, keystrokes, or usage analytics are recorded                                                                        |
+| Website content                     | **No**  | the extension reads bookmark titles and URLs through the `bookmarks` API only, never page content, and nothing is transmitted |
 
 The three certifications can all be accepted:
 
@@ -109,10 +109,10 @@ publisher-level problem, not just an item-level one.
 
 ## Distribution tab
 
-| Field | Value |
-| --- | --- |
-| Visibility | Public |
-| Pricing | Free |
+| Field                   | Value       |
+| ----------------------- | ----------- |
+| Visibility              | Public      |
+| Pricing                 | Free        |
 | Geographic distribution | All regions |
 
 ---

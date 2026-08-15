@@ -25,3 +25,20 @@ export function claimsReadOnly(text) {
 export function claimsCannotDelete(text) {
   return CANNOT_DELETE_CLAIMS.test(text);
 }
+
+/**
+ * The listing draft holds both the copy that gets pasted into the dashboard and
+ * the guidance about what that copy must not claim. Only the fenced `text`
+ * blocks are pasted, so the predicates above have to run on those alone or the
+ * guidance fails the check it exists to describe.
+ *
+ * Returned as a single line: the copy is hard-wrapped, and a phrase that
+ * straddles a line break otherwise reads to a regex as if it were absent.
+ */
+export function pastedListingCopy(markdown) {
+  return [...markdown.matchAll(/```text\r?\n([\s\S]*?)```/g)]
+    .map((match) => match[1])
+    .join("\n")
+    .replace(/\s+/g, " ")
+    .trim();
+}
