@@ -116,7 +116,9 @@ for (const size of SIZES) {
 // Edge Add-ons asks for a 300x300 store logo. It is listing art, not part of the
 // package, so it is written outside extension/ where check:store would flag it
 // as a file the manifest never references.
-const STORE_LOGO_DIR = fileURLToPath(new URL("../store-assets/", import.meta.url));
+const STORE_LOGO_DIR = fileURLToPath(
+  new URL("../store-assets/", import.meta.url),
+);
 const STORE_LOGO_SIZE = 300;
 mkdirSync(STORE_LOGO_DIR, { recursive: true });
 const logo = join(STORE_LOGO_DIR, `store-logo-${STORE_LOGO_SIZE}.png`);
