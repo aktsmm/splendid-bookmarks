@@ -193,6 +193,16 @@ try {
       walk(root);
       return nodes;
     })()`);
+  // Bookmarks rather than nodes: the permanent folder set varies by locale and
+  // channel, so a total count cannot tell an empty profile from a populated one.
+  const countBookmarks = () =>
+    evaluate(`(async () => {
+      const [root] = await chrome.bookmarks.getTree();
+      let urls = 0;
+      const walk = (node) => { if (node.url) urls += 1; for (const child of node.children ?? []) walk(child); };
+      walk(root);
+      return urls;
+    })()`);
   const noSeedRoots = () =>
     new Error(
       "no writable bookmarks-bar and other pair to seed from in this profile",
@@ -244,6 +254,20 @@ try {
     );
   }
   if (!roots.home) throw noSeedRoots();
+
+  // Nothing above this point has written a bookmark. A profile this run created
+  // empty and that is no longer empty means browser sign-on pulled a real
+  // account in, and every fixture below would be created inside it. SIGNIN_PAUSE
+  // is exempt because its gate is the consent taken before the browser existed.
+  if (!SIGNIN_PAUSE) {
+    const existing = await countBookmarks();
+    record("bookmarks before the first write", `${existing}`);
+    if (existing !== 0) {
+      throw new Error(
+        `the throwaway profile already holds ${existing} bookmark(s), so this run will not write into it`,
+      );
+    }
+  }
 
   // --- seed throwaway fixtures -----------------------------------------------
   // Three copies of one URL across two folders, so the quarantine send has to
