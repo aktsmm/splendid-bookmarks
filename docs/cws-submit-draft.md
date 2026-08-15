@@ -6,6 +6,17 @@ build; `npm run check:store` fails if the repository drifts from it.
 Source of truth for the artifact: `builds/splendid-bookmarks-v0.4.0.zip` (42 files,
 `manifest.json` at the archive root), built by `npm run zip`.
 
+## Submission record
+
+| | |
+| --- | --- |
+| Item ID | `ehmdjfhakpifieboiogjemfdbgaemmaj` |
+| First submitted | 2026-08-15, version 0.4.0 |
+| Publisher account | `vainful@icloud.com` |
+
+The item ID is what a later automated upload needs as `EXTENSION_ID`, and it is the id
+the public store URL will carry, so it is recorded here rather than looked up again.
+
 ---
 
 ## Store listing tab

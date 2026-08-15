@@ -303,7 +303,7 @@ npm run pilot -- --extension-dir <展開先>
 
 ## Distribution
 
-**現状: どのストアにも公開していません。** 権限は `bookmarks` と、ロールバック用ジャーナルと Trash 台帳を保持する `storage` の 2 つだけです。
+**現状: どのストアでも未公開です。**Chrome ウェブストアに 0.4.0 を提出済みで、**審査待ち**（2026-08-15 提出、アイテム ID `ehmdjfhakpifieboiogjemfdbgaemmaj`）です。権限は `bookmarks` と、ロールバック用ジャーナルと Trash 台帳を保持する `storage` の 2 つだけです。
 
 ストア公開に向けて、リポジトリ側で足りないものは次で確認できます。
 
