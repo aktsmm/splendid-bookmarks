@@ -120,9 +120,14 @@ test("a draft with no pasted block yields nothing rather than a silent pass", ()
 
 function listingBlocks() {
   const source = readFileSync(join(root, "docs", "cws-listing.md"), "utf8");
-  const blocks = [...source.matchAll(/```text\r?\n([\s\S]*?)\r?\n```/g)]
-    .map((match) => match[1].replace(/\s+/g, " ").trim());
-  assert.equal(blocks.length, 4, "expected a summary and description for both locales");
+  const blocks = [...source.matchAll(/```text\r?\n([\s\S]*?)\r?\n```/g)].map(
+    (match) => match[1].replace(/\s+/g, " ").trim(),
+  );
+  assert.equal(
+    blocks.length,
+    4,
+    "expected a summary and description for both locales",
+  );
   assert.ok(blocks.every((block) => block.length > 0));
   return blocks;
 }
@@ -132,15 +137,35 @@ test("listing leads with coding-agent operation instead of optional AI", () => {
   assert.match(enSummary, /^Let coding agents/);
   assert.match(jaSummary, /^コーディングエージェント/);
   assert.match(enDescription, /^Splendid Bookmarks is built for coding agents/);
-  assert.match(jaDescription, /^Splendid Bookmarks は、コーディングエージェント/);
-  for (const summary of [enSummary, jaSummary]) assert.ok(summary.length <= 132);
+  assert.match(
+    jaDescription,
+    /^Splendid Bookmarks は、コーディングエージェント/,
+  );
+  for (const summary of [enSummary, jaSummary])
+    assert.ok(summary.length <= 132);
   for (const description of [enDescription, jaDescription]) {
     assert.match(description, /window\.splendidBookmarks\.run/);
-    for (const command of ["capabilities", "getStats", "getTree", "search", "listTrash",
-      "loadPlan", "dryRun", "apply", "verify", "rollback"]) {
-      assert.ok(description.includes(command), `published command missing: ${command}`);
+    for (const command of [
+      "capabilities",
+      "getStats",
+      "getTree",
+      "search",
+      "listTrash",
+      "loadPlan",
+      "dryRun",
+      "apply",
+      "verify",
+      "rollback",
+    ]) {
+      assert.ok(
+        description.includes(command),
+        `published command missing: ${command}`,
+      );
     }
-    assert.doesNotMatch(description, /OPTIONAL: AI AGENTS|任意: AI エージェント/);
+    assert.doesNotMatch(
+      description,
+      /OPTIONAL: AI AGENTS|任意: AI エージェント/,
+    );
     assert.equal(claimsReadOnly(description), false);
     assert.equal(claimsCannotDelete(description), false);
   }
@@ -171,34 +196,54 @@ test("release copy includes connection, backup, pagination and data-sharing cave
 
 test("store summaries agree with manifest locales, catalog and submission draft", () => {
   const blocks = listingBlocks();
-  for (const [locale, index] of [["en", 0], ["ja", 2]]) {
-    const manifestLocale = JSON.parse(readFileSync(join(localesDir, locale, "messages.json"), "utf8"));
+  for (const [locale, index] of [
+    ["en", 0],
+    ["ja", 2],
+  ]) {
+    const manifestLocale = JSON.parse(
+      readFileSync(join(localesDir, locale, "messages.json"), "utf8"),
+    );
     assert.equal(manifestLocale.extensionDescription.message, blocks[index]);
     assert.equal(MESSAGES[locale].extensionDescription, blocks[index]);
   }
   const draft = readFileSync(join(root, "docs", "cws-submit-draft.md"), "utf8");
-  const summary = /```text\r?\n([\s\S]*?)\r?\n```/.exec(draft)?.[1].replace(/\s+/g, " ").trim();
+  const summary = /```text\r?\n([\s\S]*?)\r?\n```/
+    .exec(draft)?.[1]
+    .replace(/\s+/g, " ")
+    .trim();
   assert.equal(summary, blocks[0]);
 });
 
 test("the product purpose and plan-file labels stay agent-first", () => {
   for (const file of ["README.md", "docs/design.md"]) {
-    const source = readFileSync(join(root, file), "utf8").replace(/\r\n/g, "\n");
+    const source = readFileSync(join(root, file), "utf8").replace(
+      /\r\n/g,
+      "\n",
+    );
     const introduction = source.split("\n\n")[1];
     assert.match(introduction, /^コーディングエージェントから/);
     assert.doesNotMatch(introduction, /単体で使えることを主線|任意の入力手段/);
   }
   for (const locale of ["en", "ja"]) {
-    assert.doesNotMatch(MESSAGES[locale]["section.agent.title"], /optional|任意/);
+    assert.doesNotMatch(
+      MESSAGES[locale]["section.agent.title"],
+      /optional|任意/,
+    );
     assert.match(MESSAGES[locale]["section.agent.note"], /API/);
   }
 });
 
 test("privacy copy covers browser-agent sharing and versioned startup reads", () => {
-  const policy = readFileSync(join(root, "docs", "privacy-policy.md"), "utf8").replace(/\s+/g, " ");
+  const policy = readFileSync(
+    join(root, "docs", "privacy-policy.md"),
+    "utf8",
+  ).replace(/\s+/g, " ");
   assert.match(policy, /external coding agent browser automation access/);
   assert.match(policy, /外部のコーディングエージェント.*ブラウザー操作/);
   assert.match(policy, /version 0\.5\.0 starts the first read automatically/);
   assert.match(policy, /0\.5\.0は画面を開くと初回読込を自動/);
-  assert.doesNotMatch(policy, /only after you click a button|ページを開いてボタンを押したときだけ/);
+  assert.doesNotMatch(
+    policy,
+    /only after you click a button|ページを開いてボタンを押したときだけ/,
+  );
 });

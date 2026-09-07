@@ -5,25 +5,51 @@ import { runInNewContext } from "node:vm";
 import { LocalizedError } from "../extension/src/core/errors.js";
 import { deriveControlState, MODE } from "../extension/src/core/ui-state.js";
 
-const source = readFileSync(new URL("../extension/ui/options.js", import.meta.url), "utf8").replace(/\r\n/g, "\n");
-const requireControl = /function requireControl\(id\) \{[\s\S]*?\n\}/.exec(source)?.[0];
-const requireTree = /const requireTree = \(\) => \{[\s\S]*?\n\};/.exec(source)?.[0];
-const sessionBody = /getSession: \(\) => \(\{([\s\S]*?)\n  \}\),/.exec(source)?.[1];
-assert.ok(requireControl && requireTree && sessionBody, "missing API readiness surface");
+const source = readFileSync(
+  new URL("../extension/ui/options.js", import.meta.url),
+  "utf8",
+).replace(/\r\n/g, "\n");
+const requireControl = /function requireControl\(id\) \{[\s\S]*?\n\}/.exec(
+  source,
+)?.[0];
+const requireTree = /const requireTree = \(\) => \{[\s\S]*?\n\};/.exec(
+  source,
+)?.[0];
+const sessionBody = /getSession: \(\) => \(\{([\s\S]*?)\n  \}\),/.exec(
+  source,
+)?.[1];
+assert.ok(
+  requireControl && requireTree && sessionBody,
+  "missing API readiness surface",
+);
 
 function readState(overrides = {}) {
-  const state = { entries: [], loading: false, mode: MODE.IDLE, treeDigest: "digest", ...overrides };
-  const controls = deriveControlState({ hasTree: state.entries !== null, loading: state.loading, mode: state.mode });
-  const api = runInNewContext(`${requireControl}\n${requireTree}\n({
-    read: requireTree, session: () => ({${sessionBody}\n})
-  })`, {
-    state, LocalizedError,
-    el: (id) => ({ disabled: controls[id] }),
-    agentSessionId: "test-session",
-    agentSnapshotId: () => "test-session:1",
-    location: { host: "test-extension" },
-    statusOf: () => ({ kind: "ok", text: "tree loaded" }),
+  const state = {
+    entries: [],
+    loading: false,
+    mode: MODE.IDLE,
+    treeDigest: "digest",
+    ...overrides,
+  };
+  const controls = deriveControlState({
+    hasTree: state.entries !== null,
+    loading: state.loading,
+    mode: state.mode,
   });
+  const api = runInNewContext(
+    `${requireControl}\n${requireTree}\n({
+    read: requireTree, session: () => ({${sessionBody}\n})
+  })`,
+    {
+      state,
+      LocalizedError,
+      el: (id) => ({ disabled: controls[id] }),
+      agentSessionId: "test-session",
+      agentSnapshotId: () => "test-session:1",
+      location: { host: "test-extension" },
+      statusOf: () => ({ kind: "ok", text: "tree loaded" }),
+    },
+  );
   return { ...api, state, controls };
 }
 
@@ -33,10 +59,17 @@ test("running UI batches also block every tree-reading API path", () => {
     assert.equal(api.session().ready, false, mode);
     assert.equal(api.session().mode, mode);
     assert.equal(api.session().loading, false);
-    assert.throws(api.read, (error) => error.key === "agent.error.notReady" && error.params.control === "export-tree");
+    assert.throws(
+      api.read,
+      (error) =>
+        error.key === "agent.error.notReady" &&
+        error.params.control === "export-tree",
+    );
   }
   for (const command of ["getStats", "getTree", "search"]) {
-    const handler = new RegExp(`${command}: [\\s\\S]*?const entries = requireTree\\(\\);`).exec(source);
+    const handler = new RegExp(
+      `${command}: [\\s\\S]*?const entries = requireTree\\(\\);`,
+    ).exec(source);
     assert.ok(handler, `${command} must use the shared tree gate`);
   }
 });
@@ -55,5 +88,8 @@ test("missing trees and reloads retain distinct readiness failures", () => {
   assert.throws(missing.read, (error) => error.key === "agent.error.noTree");
   const reloading = readState({ loading: true });
   assert.equal(reloading.session().ready, false);
-  assert.throws(reloading.read, (error) => error.key === "agent.error.notReady");
+  assert.throws(
+    reloading.read,
+    (error) => error.key === "agent.error.notReady",
+  );
 });

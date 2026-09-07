@@ -38,7 +38,9 @@ export async function inspectSession(call) {
 export async function collectInventory(call, { sessionId }) {
   const { capabilities, session, stats } = await inspectSession(call);
   if (!session.ready || session.loading)
-    throw new Error("Tree not ready; use --list to inspect loading, mode and tree status before retrying");
+    throw new Error(
+      "Tree not ready; use --list to inspect loading, mode and tree status before retrying",
+    );
   if (session.sessionId !== sessionId)
     throw new Error("Session mismatch; select the intended tab again");
   if (

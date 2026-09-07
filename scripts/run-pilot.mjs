@@ -515,7 +515,10 @@ try {
   })()`);
   try {
     await evaluate(`document.getElementById("apply-moves").click()`);
-    await waitFor(`typeof window.__pilotReadPause.release === "function"`, "UI Apply paused before its first move");
+    await waitFor(
+      `typeof window.__pilotReadPause.release === "function"`,
+      "UI Apply paused before its first move",
+    );
     const concurrent = await evaluate(`(async () => {
       const session = await window.splendidBookmarks.run("getSession");
       const reads = [];
@@ -534,8 +537,10 @@ try {
       assert.equal(result.error?.key, "agent.error.notReady");
       assert.equal(result.error?.params?.control, "export-tree");
     }
-    const options = { endpoint: `http://127.0.0.1:${session.port}`,
-      "extension-id": concurrent.session.state.extensionId };
+    const options = {
+      endpoint: `http://127.0.0.1:${session.port}`,
+      "extension-id": concurrent.session.state.extensionId,
+    };
     const listed = await runInventory({ ...options, list: true });
     assert.equal(listed.candidates.length, 1);
     const candidate = listed.candidates[0];
@@ -543,10 +548,21 @@ try {
     assert.equal(candidate.mode, "applying");
     assert.equal(candidate.bookmarks, null);
     const output = join(profile, "busy-inventory.json");
-    await assert.rejects(runInventory({ ...options, "target-id": candidate.targetId,
-      "session-id": candidate.sessionId, label: "pilot-busy", output }), /Tree not ready/);
+    await assert.rejects(
+      runInventory({
+        ...options,
+        "target-id": candidate.targetId,
+        "session-id": candidate.sessionId,
+        label: "pilot-busy",
+        output,
+      }),
+      /Tree not ready/,
+    );
     assert.equal(existsSync(output), false);
-    record("concurrent UI reads", "PASS: Apply reports not ready; stats/tree/search refuse; CLI reports applying and saves no file");
+    record(
+      "concurrent UI reads",
+      "PASS: Apply reports not ready; stats/tree/search refuse; CLI reports applying and saves no file",
+    );
   } finally {
     await evaluate(`(() => {
       const pause = window.__pilotReadPause;

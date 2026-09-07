@@ -51,9 +51,17 @@ try {
     assert.equal(rendered.heading, MESSAGES[locale]["section.agent.title"]);
     assert.equal(rendered.note, MESSAGES[locale]["section.agent.note"]);
     assert.equal(rendered.rendered, true);
-    assert.ok([MESSAGES.en.extensionDescription, MESSAGES.ja.extensionDescription].includes(rendered.description));
+    assert.ok(
+      [
+        MESSAGES.en.extensionDescription,
+        MESSAGES.ja.extensionDescription,
+      ].includes(rendered.description),
+    );
   }
-  record("agent-first copy", "English/Japanese plan-file headings and API notes rendered; packaged summary matches");
+  record(
+    "agent-first copy",
+    "English/Japanese plan-file headings and API notes rendered; packaged summary matches",
+  );
 
   await evaluate(`(async () => {
     const [root] = await chrome.bookmarks.getTree();

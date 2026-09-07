@@ -1,6 +1,9 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { collectInventory, inspectSession } from "../scripts/lib/agent-inventory.mjs";
+import {
+  collectInventory,
+  inspectSession,
+} from "../scripts/lib/agent-inventory.mjs";
 import {
   capabilitiesState,
   okResult,
@@ -161,7 +164,8 @@ test("collector checks count agreement and response envelopes", async () => {
 test("session inspection reports UI activity without requesting blocked stats", async () => {
   for (const mode of ["applying", "rollingBack", "restoring"]) {
     const { call, calls } = fakeCall((command, result) => {
-      if (command === "getSession") Object.assign(result.state, { ready: false, mode });
+      if (command === "getSession")
+        Object.assign(result.state, { ready: false, mode });
       return result;
     });
     const inspected = await inspectSession(call);
@@ -169,29 +173,52 @@ test("session inspection reports UI activity without requesting blocked stats", 
     assert.equal(inspected.session.ready, false);
     assert.equal(inspected.stats, null);
     assert.ok(!calls.includes("getStats"));
-    await assert.rejects(collectInventory(call, { sessionId: session.sessionId }), /Tree not ready.*mode/);
+    await assert.rejects(
+      collectInventory(call, { sessionId: session.sessionId }),
+      /Tree not ready.*mode/,
+    );
     assert.ok(!calls.includes("getTree"));
   }
 });
 
 test("a UI operation starting between pages rejects the inventory without continuing", async () => {
   const { call, calls } = fakeCall((command, result, history) => {
-    if (command === "getTree" && history.filter((name) => name === command).length === 2) {
-      return { ok: false, version: 1, command, state: null,
-        error: { key: "agent.error.notReady", params: { control: "export-tree" } } };
+    if (
+      command === "getTree" &&
+      history.filter((name) => name === command).length === 2
+    ) {
+      return {
+        ok: false,
+        version: 1,
+        command,
+        state: null,
+        error: {
+          key: "agent.error.notReady",
+          params: { control: "export-tree" },
+        },
+      };
     }
     return result;
   });
-  await assert.rejects(collectInventory(call, { sessionId: session.sessionId }), /agent.error.notReady/);
+  await assert.rejects(
+    collectInventory(call, { sessionId: session.sessionId }),
+    /agent.error.notReady/,
+  );
   assert.equal(calls.filter((command) => command === "getTree").length, 2);
 });
 
 test("a UI operation starting after the last page prevents completed inventory", async () => {
   const { call } = fakeCall((command, result, calls) => {
-    if (command === "getSession" && calls.filter((name) => name === command).length === 2) {
+    if (
+      command === "getSession" &&
+      calls.filter((name) => name === command).length === 2
+    ) {
       Object.assign(result.state, { ready: false, mode: "applying" });
     }
     return result;
   });
-  await assert.rejects(collectInventory(call, { sessionId: session.sessionId }), /changed after collection/);
+  await assert.rejects(
+    collectInventory(call, { sessionId: session.sessionId }),
+    /changed after collection/,
+  );
 });

@@ -26,18 +26,18 @@ the public store URL will carry, so it is recorded here rather than looked up ag
 
 ## Store listing tab
 
-| Field                  | Value                                                                   |
-| ---------------------- | ----------------------------------------------------------------------- |
-| Item name              | `Splendid Bookmarks`                                                    |
+| Field                            | Value                                                                   |
+| -------------------------------- | ----------------------------------------------------------------------- |
+| Item name                        | `Splendid Bookmarks`                                                    |
 | Summary (manifest, 132 char max) | localized `extensionDescription`; reference copy below                  |
-| Detailed description   | see [cws-listing.md](cws-listing.md)                                    |
-| Category               | `Workflow & Planning`                                                   |
-| Language               | `English` (plus a `日本語` locale in the listing)                       |
-| Store icon             | `extension/icons/icon-128.png` (128x128)                                |
-| Screenshots            | `submission-screenshots/01..05` at 1280x800, regenerated per submission |
-| Homepage URL           | `https://github.com/aktsmm/splendid-bookmarks`                          |
-| Support URL            | `https://github.com/aktsmm/splendid-bookmarks/issues`                   |
-| Mature content         | No                                                                      |
+| Detailed description             | see [cws-listing.md](cws-listing.md)                                    |
+| Category                         | `Workflow & Planning`                                                   |
+| Language                         | `English` (plus a `日本語` locale in the listing)                       |
+| Store icon                       | `extension/icons/icon-128.png` (128x128)                                |
+| Screenshots                      | `submission-screenshots/01..05` at 1280x800, regenerated per submission |
+| Homepage URL                     | `https://github.com/aktsmm/splendid-bookmarks`                          |
+| Support URL                      | `https://github.com/aktsmm/splendid-bookmarks/issues`                   |
+| Mature content                   | No                                                                      |
 
 Summary:
 
