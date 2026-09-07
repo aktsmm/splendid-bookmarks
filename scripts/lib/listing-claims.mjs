@@ -26,6 +26,51 @@ export function claimsCannotDelete(text) {
   return CANNOT_DELETE_CLAIMS.test(text);
 }
 
+export function normalizeListingText(text) {
+  if (typeof text !== "string") throw new TypeError("Listing text must be a string");
+  return text.replace(/\r\n?/g, "\n");
+}
+
+function textBlocks(markdown) {
+  return [...normalizeListingText(markdown).matchAll(/^```text[ \t]*\n([\s\S]*?)\n```[ \t]*(?:\n|$)/gm)]
+    .map((match) => match[1]);
+}
+
+export function extractStoreListings(markdown) {
+  const normalized = normalizeListingText(markdown);
+  const sections = normalized.split(/^##[ \t]+/m).slice(1);
+  const formats = [
+    ["en", "English", "Summary", "Detailed description"],
+    ["ja", "日本語", "概要", "詳細な説明"],
+  ];
+  const listings = {};
+  for (const [locale, heading, summaryHeading, descriptionHeading] of formats) {
+    const matches = sections.filter((section) => section.split("\n")[0].trim() === heading);
+    if (matches.length !== 1) throw new Error(`Expected one ${locale} listing section`);
+    const fields = matches[0].split(/^###[ \t]+/m).slice(1);
+    listings[locale] = {};
+    for (const [field, title] of [["summary", summaryHeading], ["description", descriptionHeading]]) {
+      const candidates = fields.filter((section) => section.split("\n")[0].trim() === title);
+      if (candidates.length !== 1) throw new Error(`Expected one ${locale}.${field} heading`);
+      const blocks = textBlocks(candidates[0]);
+      if (blocks.length !== 1 || blocks[0].trim().length === 0) {
+        throw new Error(`Expected one nonempty ${locale}.${field} text block`);
+      }
+      listings[locale][field] = blocks[0];
+    }
+  }
+  if (textBlocks(normalized).length !== formats.length * 2) {
+    throw new Error("Unexpected store listing text blocks");
+  }
+  return listings;
+}
+
+export function listingCopyMatches(expected, actual) {
+  const source = normalizeListingText(expected);
+  const saved = normalizeListingText(actual);
+  return source.trim().length > 0 && saved.trim().length > 0 && source === saved;
+}
+
 /**
  * The listing draft holds both the copy that gets pasted into the dashboard and
  * the guidance about what that copy must not claim. Only the fenced `text`

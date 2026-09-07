@@ -11,6 +11,8 @@ import { fileURLToPath } from "node:url";
 import {
   claimsCannotDelete,
   claimsReadOnly,
+  extractStoreListings,
+  listingCopyMatches,
   pastedListingCopy,
 } from "./lib/listing-claims.mjs";
 
@@ -92,6 +94,7 @@ check(
 );
 
 // --- Localized listing text --------------------------------------------------
+const localeDescriptions = new Map();
 for (const locale of readdirSync(join(extensionDir, "_locales"))) {
   const messages = JSON.parse(
     readFileSync(
@@ -101,6 +104,7 @@ for (const locale of readdirSync(join(extensionDir, "_locales"))) {
   );
   const name = messages.extensionName?.message ?? "";
   const description = messages.extensionDescription?.message ?? "";
+  localeDescriptions.set(locale, description);
   check(
     `${locale}: name and description are present`,
     Boolean(name && description),
@@ -141,7 +145,28 @@ if (!existsSync(listingCopyPath)) {
     "docs/cws-listing.md is missing",
   );
 } else {
-  const flat = pastedListingCopy(readFileSync(listingCopyPath, "utf8"));
+  const markdown = readFileSync(listingCopyPath, "utf8");
+  const flat = pastedListingCopy(markdown);
+  try {
+    const listings = extractStoreListings(markdown);
+    check("listing fields have unique locale and field headings", true, "en/ja summaries and descriptions");
+    check(
+      "listing locales match manifest locales",
+      JSON.stringify(Object.keys(listings).sort()) === JSON.stringify([...localeDescriptions.keys()].sort()),
+    );
+    for (const [locale, listing] of Object.entries(listings)) {
+      check(`${locale}: listing summary matches the package description`,
+        listingCopyMatches(listing.summary, localeDescriptions.get(locale) ?? ""));
+      check(`${locale}: detailed description is within 16000 characters`,
+        listing.description.length <= 16000, `${listing.description.length} characters`);
+      check(`${locale}: detailed description avoids blanket read-only or no-delete claims`,
+        !claimsReadOnly(listing.description) && !claimsCannotDelete(listing.description));
+      check(`${locale}: detailed description discloses irreversible deletion`,
+        /cannot be undone|irreversible|元に戻せません/i.test(listing.description));
+    }
+  } catch (error) {
+    check("listing fields have unique locale and field headings", false, error.message);
+  }
   check(
     "store listing copy is drafted in the repository",
     flat.length > 0,
@@ -218,7 +243,10 @@ const manual = [
   "The extension has been loaded unpacked and a move has been applied, verified and rolled back in a real browser",
   "A trashed bookmark has been deleted for good in a real browser, and its neighbour was left untouched",
   "The listing copy has been read against the build: it does not promise the extension cannot delete",
-  "Upload and submit for review (a signed-in browser action, not automatable here)",
+  "Read back saved descriptions after navigation; node scripts/check-listing-copy.mjs compares field files with line endings normalized only",
+  "Read back saved screenshot thumbnails after navigation; a disabled Save button alone does not prove persistence",
+  "Upload and submit using the authenticated publisher session; this checker never submits or publishes",
+  "Verify package version, saved draft, review acceptance and public availability separately; submission is not publication",
 ];
 
 const blocked = results.filter((entry) => entry.status === "BLOCK");
