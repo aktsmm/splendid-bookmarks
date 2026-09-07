@@ -47,7 +47,10 @@ import {
   journalShapeError,
 } from "../src/core/execution-session.js";
 import { verifyJournal } from "../src/core/reconciliation.js";
-import { capabilitiesState } from "../src/core/agent-command.js";
+import {
+  capabilitiesState,
+  paginateEntries,
+} from "../src/core/agent-command.js";
 import { exposeAgentApi } from "./agent-api.js";
 import {
   buildPlanFromSelection,
@@ -364,7 +367,7 @@ function resetDerivedViews() {
   applyControlState();
 }
 
-async function loadTree() {
+async function loadTree({ focus = true } = {}) {
   if (state.loading) return;
   state.loading = true;
   applyControlState();
@@ -406,7 +409,7 @@ async function loadTree() {
   } finally {
     state.loading = false;
     applyControlState();
-    focusResult("tree-status");
+    if (focus) focusResult("tree-status");
   }
 }
 
@@ -2342,8 +2345,13 @@ const requireTree = () => {
   if (state.entries === null) {
     throw new LocalizedError("agent.error.noTree");
   }
+  requireControl("export-tree");
   return state.entries;
 };
+
+const agentSessionId = globalThis.crypto.randomUUID();
+const agentSnapshotId = () =>
+  state.entries === null ? null : `${agentSessionId}:${state.generation}`;
 
 const asRow = (entry) => ({
   id: entry.id,
@@ -2358,9 +2366,23 @@ const asRow = (entry) => ({
 // Nothing here performs a bookmark write of its own.
 exposeAgentApi({
   capabilities: () => capabilitiesState(),
+  getSession: () => ({
+    sessionId: agentSessionId,
+    extensionId: location.host,
+    ready: state.entries !== null && !el("export-tree").disabled,
+    loading: state.loading,
+    mode: state.mode,
+    snapshotId: agentSnapshotId(),
+    treeDigest: state.treeDigest,
+    treeStatus: statusOf("tree-status"),
+  }),
   getStats: () => {
     const entries = requireTree();
     return {
+      sessionId: agentSessionId,
+      snapshotId: agentSnapshotId(),
+      treeDigest: state.treeDigest,
+      browser: state.browser,
       bookmarks: entries.filter((entry) => !entry.isFolder).length,
       folders: entries.filter((entry) => entry.isFolder).length,
       boundaries: [
@@ -2376,14 +2398,19 @@ exposeAgentApi({
       backupVerified: state.backupDigest !== null,
     };
   },
-  getTree: ({ limit }) => {
+  getTree: ({ limit, cursor }) => {
     const entries = requireTree();
-    const cap = limit ?? MAX_RENDERED_ROWS;
-    return { total: entries.length, shown: entries.slice(0, cap).map(asRow) };
+    const page = paginateEntries(entries, {
+      command: "getTree",
+      snapshotId: agentSnapshotId(),
+      limit,
+      cursor,
+    });
+    return { ...page, shown: page.shown.map(asRow) };
   },
   // Local filtering over the tree already in memory. `chrome.bookmarks.search`
   // is not used anywhere in this build.
-  search: ({ query, limit }) => {
+  search: ({ query, limit, cursor }) => {
     const entries = requireTree();
     const needle = query.toLowerCase();
     const hits = entries.filter(
@@ -2392,8 +2419,14 @@ exposeAgentApi({
         (entry.title.toLowerCase().includes(needle) ||
           (entry.url ?? "").toLowerCase().includes(needle)),
     );
-    const cap = limit ?? MAX_RENDERED_ROWS;
-    return { total: hits.length, shown: hits.slice(0, cap).map(asRow) };
+    const page = paginateEntries(hits, {
+      command: "search",
+      snapshotId: agentSnapshotId(),
+      query,
+      limit,
+      cursor,
+    });
+    return { ...page, shown: page.shown.map(asRow) };
   },
   listTrash: () => ({
     rejected: state.trashRejected !== null,
@@ -2444,3 +2477,7 @@ exposeAgentApi({
     return { apply: statusOf("apply-status"), mode: state.mode };
   },
 });
+
+if (state.entries === null) {
+  void loadTree({ focus: false });
+}

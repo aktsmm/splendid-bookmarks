@@ -1,6 +1,6 @@
 # Design
 
-実プロファイルのブックマークを安全に一括整理するローカル拡張機能。**単体で使えることを主線**とし、人が UI で選んだ移動と、重複の隔離移動を標準の経路にする。AI エージェントの計画 JSON は**任意の入力手段**として受け付ける。どちらの入力も同じスキーマ検証・Dry Run・承認・適用・検証・rollback を通るので、入力手段が増えても信頼境界は増えない。
+コーディングエージェントからブラウザーのブックマークを操作するためのローカル拡張機能。**エージェント向けの操作口を提供することが主目的**で、ブラウザー操作用のコマンドAPIと計画JSONの受け渡しを提供する。手動UIは、エージェントを使わない場合の操作と結果確認にも使える。入力経路によらず同じスキーマ検証・Dry Run・承認・適用・検証・rollback を通す。AIモデルや自動接続機構は内蔵せず、API自体もエージェントのブラウザー権限を制限する仕組みではない。
 
 読む前に知っておくべき 3 点。
 
@@ -156,14 +156,24 @@ Trash への退避だけでは、ユーザーは最後に別の道具（ブラ�
 
 DOM をスクレイピングさせないための、バージョン付きの入口を options ページに 1 つだけ公開する。
 
+ページ初期化と API 公開の後、ツリーが未読込なら `loadTree({ focus: false })` を一度だけ呼ぶ。読込中の再入は既存の `state.loading` で拒否し、完了後の再読込はユーザー操作に限定する。自動読込はフォーカスを移さず、スナップショット保存もブックマーク変更も行わない。失敗時は既存のエラー表示と手動再試行を利用する。`agent.error.noTree` はツリー未読込を示し、API の不存在を意味しない。復旧待ち journal の検出と Apply の安全ゲートは既存処理を維持する。
+
 - 公開は `extension/ui/agent-api.js` の 1 文のみ。`Object.freeze` したオブジェクトを `defineProperty` で non-writable / non-configurable にする。これは偶発的な差し替えを防ぐだけで、CDP クライアントに対する防御にはならない。
 - 語彙と入力検証と戻り値の形は pure core の `extension/src/core/agent-command.js` が持つ。`COMMAND_NAMES` は handler マップから導出せず、リテラルで固定する。
 - 入口は `run(command, input)` の 1 つ。全 command が同じ検証を通ることを、dispatch 箇所が 1 つであることとあわせて静的に固定する。
-- **状態を変える handler は対応する UI コントロールの `disabled` を先に見る**（`loadPlan` / `dryRun` / `apply` / `verify` / `rollback`）。ボタンが拒否している状態を API が迲回できない。書き込みを伴う command は、ボタンが呼ぶのと同じ関数を呼ぶ。読み取り command はツリーの存在だけを要求する。
+- **状態を変える handler は対応する UI コントロールの `disabled` を先に見る**（`loadPlan` / `dryRun` / `apply` / `verify` / `rollback`）。ボタンが拒否している状態を API が迂回できない。書き込みを伴う command は、ボタンが呼ぶのと同じ関数を呼ぶ。`getStats` / `getTree` / `search` はツリーの存在を確認してから `requireControl("export-tree")` を通り、読込中だけでなくUIが実行するバッチ中も拒否する。`getSession.ready` も同じコントロールに従い、診断用に `loading` と `mode` を分けて返す。`ready` は呼出時点の読取可否であり、ツリーの鮮度や実行中の書き込みに対するロック取得を意味しない。
 - **逐次実行**。実行中の command があれば `agent.error.busy` で拒否する。同一 tick から 2 つ走らせると journal で競合するため。
 - **入力検証は例外変換の内側で行う**。入力は untrusted なので、自分のキーを読むだけで throw し得る（throwing getter / Proxy）。固定形を返すという契約を守る。
 - `emptyTrash` / `exportSnapshot` / `sendToTrash` / `restoreBatch` は公開しない。これはスコープの選択であって安全境界ではない。
 - `apply` はバックアップの再選択（ファイルピッカー = 人の操作）を前提にするので、**API だけでは適用を完結できない**。
+
+### ページ送りと接続先
+
+`getTree` と `search` は共通の `paginateEntries` を使い、1ページ最大500ノードのまま `nextCursor` / `truncated` / `snapshotId` を返す。cursor は `{ snapshotId, offset, command, query }` の固定形で検証し、別command・検索条件・世代への流用を拒否する。ページ初期化で生成するランダムな `sessionId` と `state.generation` を組み合わせるため、同じ内容を再読込した場合も古いcursorは失効する。外部のブックマーク変更ではなく、ページに読み込んだツリーの世代を固定する契約である。
+
+取得CLIはloopbackのCDP endpoint、拡張オプションの完全一致URL、target ID、session IDを照合する。各評価前にURLを再確認し、呼び出すのは `capabilities` / `getSession` / `getStats` / `getTree` のみ。全ページの件数・世代・ID一意性・終了時セッションを照合してから、明示指定された新規ファイルだけを書き出す。ラベルは出力用の利用者指定名であり、認証やプロファイルの自動判定ではない。旧APIや途中失敗を直接書き込みAPIへの切り替え理由にしない。
+
+UIから開始したバッチ中もツリー読取を拒否し、CLI一覧では `mode` を表示して件数を `null` とする。開始前・ページ間・全件取得直後のロック検出はいずれも収集失敗であり、途中の一覧を保存しない。バッチ完了後は読み込み済みスナップショットを取得できる。実機pilotではUIの最初のmoveを一時停止して、API拒否・CLI診断・ファイル未生成を確認し、解除後に適用・検証・ロールバックまで継続する。
 
 ### 静的ゲートが証明する範囲
 

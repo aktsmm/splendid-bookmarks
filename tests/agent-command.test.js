@@ -20,6 +20,7 @@ import { exposeAgentApi } from "../extension/ui/agent-api.js";
  */
 const EXPECTED_COMMANDS = [
   "capabilities",
+  "getSession",
   "getStats",
   "getTree",
   "search",
@@ -54,6 +55,11 @@ test("capabilities names its own limits and says what it is not", () => {
   assert.deepEqual(state.commands, EXPECTED_COMMANDS);
   assert.equal(state.limits.maxPlanOperations, 5000);
   assert.equal(state.limits.maxRows, 500);
+  assert.deepEqual(state.features, {
+    pagination: true,
+    sessionInfo: true,
+    automaticTreeLoad: true,
+  });
   assert.deepEqual(state.notes, {
     applyNeedsHumanBackup: true,
     canDelete: false,
@@ -105,6 +111,7 @@ test("accepted invocations are accepted", () => {
   const cases = [
     ["capabilities", undefined],
     ["capabilities", {}],
+    ["getSession", {}],
     ["getStats", {}],
     ["getTree", { limit: 500 }],
     ["search", { query: "azure" }],

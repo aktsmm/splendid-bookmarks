@@ -17,6 +17,7 @@ import {
   rmSync,
 } from "node:fs";
 import { dirname, join, resolve } from "node:path";
+import { connectCdp as connect } from "./cdp-client.mjs";
 
 export const ROOT = resolve(process.cwd());
 export const EXT = join(ROOT, "extension");
@@ -32,40 +33,6 @@ const DEFAULT_BROWSER =
 // debugging port, or the sync flag this harness relies on.
 const DUAL_STORE_FLAGS =
   "--enable-features=SyncEnableBookmarksInTransportMode,EnableBookmarksSelectedTypeOnSigninForTesting";
-
-/** Minimal CDP client over the Node 22 built-in WebSocket. */
-function connect(wsUrl, callTimeoutMs) {
-  const socket = new WebSocket(wsUrl);
-  const pending = new Map();
-  let next = 0;
-  const ready = new Promise((res, rej) => {
-    socket.onopen = () => res();
-    socket.onerror = (e) =>
-      rej(new Error(`ws error: ${e.message ?? "unknown"}`));
-  });
-  socket.onmessage = (event) => {
-    const msg = JSON.parse(event.data);
-    const slot = pending.get(msg.id);
-    if (!slot) return;
-    pending.delete(msg.id);
-    if (msg.error) slot.reject(new Error(JSON.stringify(msg.error)));
-    else slot.resolve(msg.result);
-  };
-  return {
-    ready,
-    close: () => socket.close(),
-    send(method, params = {}) {
-      const id = (next += 1);
-      return new Promise((resolve, reject) => {
-        pending.set(id, { resolve, reject });
-        socket.send(JSON.stringify({ id, method, params }));
-        setTimeout(() => {
-          if (pending.delete(id)) reject(new Error(`${method} timed out`));
-        }, callTimeoutMs);
-      });
-    },
-  };
-}
 
 async function untilJson(url, tries = 60) {
   for (let i = 0; i < tries; i += 1) {
@@ -363,14 +330,20 @@ export function makeWaiter(evaluate) {
 export function makeClicker(evaluate) {
   return async function clickUntil(buttonId, doneExpression, what, tries = 60) {
     const id = JSON.stringify(buttonId);
+    const done = `(${doneExpression}) && !!document.getElementById(${id}) && !document.getElementById(${id}).disabled`;
+    let clicked = false;
     for (let i = 0; i < tries; i += 1) {
-      if (await evaluate(doneExpression)) return true;
-      await evaluate(`(() => {
+      if (clicked && (await evaluate(done))) return true;
+      const dispatched = await evaluate(`(() => {
         const button = document.getElementById(${id});
-        if (button && !button.disabled) button.click();
+        if (!button || button.disabled) return false;
+        button.click();
+        return true;
       })()`);
+      clicked = clicked || dispatched;
       await sleep(250);
     }
+    if (clicked && (await evaluate(done))) return true;
     const state = await evaluate(
       `JSON.stringify({ present: !!document.getElementById(${id}), disabled: document.getElementById(${id})?.disabled ?? null })`,
     );

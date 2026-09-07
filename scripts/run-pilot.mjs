@@ -10,9 +10,11 @@
 // two-store procedure it depends on is a documented Chrome procedure.
 // PILOT_REQUIRE_BOUNDARY=1 makes a skipped boundary its own exit code.
 import { createInterface } from "node:readline/promises";
+import assert from "node:assert/strict";
 import { randomUUID } from "node:crypto";
-import { readdirSync, writeFileSync } from "node:fs";
+import { existsSync, readdirSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
+import { runInventory } from "./bookmark-inventory.mjs";
 
 import {
   OUTCOME,
@@ -502,13 +504,71 @@ try {
       !(await evaluate(`document.getElementById("apply-moves").disabled`)),
     ),
   );
-  await evaluate(`document.getElementById("apply-moves").click()`);
+  await evaluate(`(() => {
+    const originalMove = chrome.bookmarks.move.bind(chrome.bookmarks);
+    window.__pilotReadPause = { originalMove, release: null };
+    chrome.bookmarks.move = async (...args) => {
+      chrome.bookmarks.move = originalMove;
+      await new Promise((resolve) => { window.__pilotReadPause.release = resolve; });
+      return originalMove(...args);
+    };
+  })()`);
+  try {
+    await evaluate(`document.getElementById("apply-moves").click()`);
+    await waitFor(`typeof window.__pilotReadPause.release === "function"`, "UI Apply paused before its first move");
+    const concurrent = await evaluate(`(async () => {
+      const session = await window.splendidBookmarks.run("getSession");
+      const reads = [];
+      for (const [command, input] of [["getStats", {}], ["getTree", {}], ["search", { query: "pilot" }]]) {
+        reads.push(await window.splendidBookmarks.run(command, input));
+      }
+      return { session, reads, exportDisabled: document.getElementById("export-tree").disabled };
+    })()`);
+    assert.equal(concurrent.session.ok, true);
+    assert.equal(concurrent.session.state.mode, "applying");
+    assert.equal(concurrent.session.state.loading, false);
+    assert.equal(concurrent.session.state.ready, false);
+    assert.equal(concurrent.exportDisabled, true);
+    for (const result of concurrent.reads) {
+      assert.equal(result.ok, false);
+      assert.equal(result.error?.key, "agent.error.notReady");
+      assert.equal(result.error?.params?.control, "export-tree");
+    }
+    const options = { endpoint: `http://127.0.0.1:${session.port}`,
+      "extension-id": concurrent.session.state.extensionId };
+    const listed = await runInventory({ ...options, list: true });
+    assert.equal(listed.candidates.length, 1);
+    const candidate = listed.candidates[0];
+    assert.equal(candidate.ready, false);
+    assert.equal(candidate.mode, "applying");
+    assert.equal(candidate.bookmarks, null);
+    const output = join(profile, "busy-inventory.json");
+    await assert.rejects(runInventory({ ...options, "target-id": candidate.targetId,
+      "session-id": candidate.sessionId, label: "pilot-busy", output }), /Tree not ready/);
+    assert.equal(existsSync(output), false);
+    record("concurrent UI reads", "PASS: Apply reports not ready; stats/tree/search refuse; CLI reports applying and saves no file");
+  } finally {
+    await evaluate(`(() => {
+      const pause = window.__pilotReadPause;
+      if (!pause) return;
+      chrome.bookmarks.move = pause.originalMove;
+      pause.release?.();
+      delete window.__pilotReadPause;
+    })()`);
+  }
   await waitFor(
     `["ok","error"].includes(document.getElementById("apply-status").dataset.kind)`,
     "apply",
     120,
   );
   record("apply", (await statusOf("apply-status")).text);
+  const settled = await evaluate(`(async () => ({
+    session: await window.splendidBookmarks.run("getSession"),
+    tree: await window.splendidBookmarks.run("getTree"),
+  }))()`);
+  assert.equal(settled.session.state.ready, true);
+  assert.equal(settled.session.state.mode, "applied");
+  assert.equal(settled.tree.ok, true);
   record(
     "the result names the destination folder",
     await evaluate(

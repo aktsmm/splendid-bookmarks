@@ -78,10 +78,10 @@ https://github.com/aktsmm/splendid-bookmarks/blob/main/docs/privacy-policy.md
 | -------------------- | -------------------------------------------------------------------------------------------- |
 | 拡張機能名           | `Splendid Bookmarks`（マニフェスト由来、Partner Center 上は読み取り専用）                    |
 | 簡単な説明           | マニフェストの `description` 由来。変更するにはパッケージ再アップロードが必要                |
-| 説明                 | [cws-listing.md](cws-listing.md) の Detailed description をそのまま（2,530 文字 > 最小 250） |
+| 説明                 | [cws-listing.md](cws-listing.md) の対応言語の詳細説明。提出前に現行原稿の文字数を検査する |
 | 拡張機能のロゴ       | `store-assets/store-logo-300.png`（300x300）                                                 |
 | スクリーンショット   | `submission-screenshots/01..05`（1280x800、最大 6 枚まで可）                                 |
-| 検索語句             | `bookmarks, duplicates, cleanup, trash, rollback, backup`                                    |
+| 検索語句             | `bookmarks, coding agents, automation, API, rollback, backup`                               |
 | プロモーションタイル | 未作成（省略可）                                                                             |
 
 英語で 1 言語ぶん入れれば提出できる。日本語を足す場合は同じページで言語を追加し、

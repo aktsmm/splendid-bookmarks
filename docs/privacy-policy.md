@@ -1,10 +1,10 @@
 # Privacy Policy — Splendid Bookmarks
 
-Last updated: 2026-08-13
+Last updated: 2026-09-07
 
 ## English
 
-**This extension sends nothing to the developer, to any server, or to any third party.**
+**The extension itself makes no network requests to the developer, a server or a third party.**
 It does read your bookmarks, and it does keep a few small records on your own device. Both
 are itemised below, because "nothing leaves your computer" is not the same as "nothing is
 read or stored".
@@ -13,14 +13,16 @@ read or stored".
 
 With the `bookmarks` permission, the extension reads your bookmark tree: each bookmark's
 title, URL, folder path, position, and the browser-provided flags that tell account-synced
-bookmarks apart from local ones. It reads this only while you have its page open and only
-after you click a button.
+bookmarks apart from local ones. It reads this only while its manager page is open.
+Version 0.4.0 requires a tree-load action; version 0.5.0 starts the first
+read automatically when the manager opens. Neither reads bookmarks in the background
+after the manager is closed.
 
 ### Where that data goes
 
 Nowhere. The extension has no server, makes no network requests of any kind, and contains
 no analytics, telemetry, or advertising code. Its content security policy forbids loading
-remote code, and it declares no host permissions, so it cannot contact any website.
+remote code, and it declares no host permissions.
 
 Two features write files, and both are started by you:
 
@@ -30,6 +32,11 @@ Two features write files, and both are started by you:
 Those files stay on your computer. What you subsequently do with them — for example pasting
 them into an AI assistant — is outside this extension and under your control. The extension
 never sends them anywhere.
+
+If you give an external coding agent browser automation access to the manager, it can
+also read bookmark titles and URLs through that access. Data shared by file or browser
+access may be processed by the agent's provider under that tool's settings and privacy
+policy. The extension does not control that external processing.
 
 ### What is stored on your device
 
@@ -86,7 +93,7 @@ once the extension is published there.
 
 ## 日本語
 
-**この拡張機能は、開発者・サーバー・第三者のいずれに対してもデータを送信しません。**
+**この拡張機能自身は、開発者・サーバー・第三者へネットワーク送信しません。**
 ただし、ブックマークの読み取りと、お使いの端末内への小さな記録の保存は行います。いずれも
 以下に列挙します。「外部に出ない」ことと「読まない・保存しない」ことは別だからです。
 
@@ -94,14 +101,15 @@ once the extension is published there.
 
 `bookmarks` 権限により、ブックマークツリーを読み取ります。各ブックマークのタイトル、URL、
 フォルダーパス、位置、およびアカウント同期ブックマークとローカルブックマークを区別する
-ためのブラウザー提供フラグです。読み取りは、拡張機能のページを開いてボタンを押したときだけ
-行われます。
+ためのブラウザー提供フラグです。読み取りはマネージャー画面を開いている間だけ行います。
+0.4.0はツリー読込の操作が必要で、0.5.0は画面を開くと初回読込を自動で開始します。
+どちらも画面を閉じた後にバックグラウンドでブックマークを読み取ることはありません。
 
 ### そのデータの行き先
 
 どこにも送信しません。サーバーを持たず、いかなるネットワーク通信も行わず、解析・テレメトリ・
 広告のコードを含みません。コンテンツセキュリティポリシーでリモートコードの読み込みを禁止し、
-ホスト権限を一切宣言していないため、どのウェブサイトにも接続できません。
+ホスト権限も宣言していません。
 
 ファイルを書き出す機能が 2 つありますが、どちらもご自身の操作で開始されます。
 
@@ -111,6 +119,11 @@ once the extension is published there.
 保存されたファイルはお使いのコンピューター内に留まります。その後それらを AI アシスタントへ
 貼り付けるなどの操作は、この拡張機能の外側であり、利用者の管理下にあります。拡張機能が
 それらをどこかへ送ることはありません。
+
+外部のコーディングエージェントにマネージャー画面のブラウザー操作を許可すると、そのアクセスを
+通じてタイトルやURLを読み取ることもできます。ファイルやブラウザー経由で渡したデータは、
+そのツールの設定・プライバシーポリシーに従ってエージェントの提供元で処理される可能性があります。
+拡張機能は外部ツールでの処理を管理しません。
 
 ### 端末に保存するもの
 

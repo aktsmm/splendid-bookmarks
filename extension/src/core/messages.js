@@ -17,14 +17,14 @@ export const MESSAGES = {
   en: {
     extensionName: "Splendid Bookmarks",
     extensionDescription:
-      "Tidy bookmarks safely: dry run, verified backup, rollback, a reversible Trash folder, and a confirmed two-step delete.",
+      "Let coding agents search, move and rename your bookmarks, with dry runs, verified backups and rollback.",
     actionTitle: "Splendid Bookmarks",
 
     "ui.language": "Language",
     "ui.badge.writeScope":
       "It moves bookmarks and folders, renames a bookmark when a plan asks it to, creates the one Trash folder you ask for, and deletes only what you confirm from the Trash",
     "ui.intro":
-      "Load the tree first — that unlocks the rest. Export a snapshot and re-select it before applying anything; that backup is what makes the batch reversible.",
+      "The tree loads automatically when this page opens. Before applying changes, export a snapshot and re-select it to verify your backup.",
     "ui.popup.badge": "Move first, delete last",
     "ui.popup.note":
       "This build moves bookmarks and folders, and can rename a bookmark when a loaded plan asks for it. It never changes a URL or renames a folder, and it only deletes items you have sent to the Trash and confirmed.",
@@ -46,9 +46,9 @@ export const MESSAGES = {
     "section.duplicates.send": "Send the rest to step 3",
     "section.duplicates.hint":
       'Pick the one copy to keep in each group, then send the rest to step 3 and move them into a folder you keep them in. This step only moves them; nothing is deleted here. Create that folder yourself in your browser\'s bookmark manager first (for example "Duplicates (review)"), reload the tree, then choose it under "Move them into" in step 3.',
-    "section.agent.title": "7. AI agent handoff (optional)",
+    "section.agent.title": "7. Agent plan files",
     "section.agent.note":
-      "Optional. Steps 1-5 work without an agent. If you want one to plan the moves, give it the context file and the prompt below; both are generated from the tree you just loaded.",
+      "Export the context and prompt for your agent, then import its plan JSON. Agents with browser automation access can also use the manager's command API.",
     "section.agent.export": "Export agent context (JSON)",
     "section.agent.scope": "Bookmarks to place",
     "section.agent.scope.all": "Everything in the profile",
@@ -486,11 +486,18 @@ export const MESSAGES = {
     "agent.error.inputNotObject": "{command} takes an object, or nothing",
     "agent.error.unknownField": '{command} does not accept a "{field}" field',
     "agent.error.query": "search needs a non-empty query string",
+    "agent.error.cursor":
+      "the page cursor is invalid; start again without a cursor",
+    "agent.error.cursorMismatch":
+      "the cursor belongs to a different command or search query",
+    "agent.error.staleCursor":
+      "the tree or page has been reloaded; discard previous pages and start again",
     "agent.error.limit": "{command} takes a limit between 1 and {limit}",
     "agent.error.planNotObject": "loadPlan takes the plan document itself",
     "agent.error.tooManyOperations":
       "the plan carries {count} operations, over the {limit} allowed",
-    "agent.error.noTree": "load the tree first",
+    "agent.error.noTree":
+      "the tree is not loaded yet; wait for startup, or use Load tree to retry if loading failed",
     "agent.error.notReady":
       'the page is refusing that right now; "{control}" is disabled, and the API does not reach past it',
     "agent.error.failed": "the command failed: {message}",
@@ -546,14 +553,14 @@ export const MESSAGES = {
   ja: {
     extensionName: "Splendid Bookmarks",
     extensionDescription:
-      "Dry Run とバックアップ検証のうえで移動を適用します。Trash へ送った項目はバッチ単位で元の並び順のまま戻せます。永続削除は確認付きの別ステップです。",
+      "コーディングエージェントからブックマークを検索・移動・改名。Dry Run、バックアップ検証、ロールバックで整理を支援します。",
     actionTitle: "Splendid Bookmarks",
 
     "ui.language": "表示言語",
     "ui.badge.writeScope":
       "ブックマークとフォルダーの移動、計画が指示した場合のブックマーク改名、依頼された Trash フォルダーの作成、Trash から確認した項目の削除だけを行います",
     "ui.intro":
-      "まずツリーを読み込むと以降が使えます。適用前にスナップショットを書き出して再選択してください。そのバックアップがバッチを元に戻せる根拠になります。",
+      "画面を開くとツリーを自動で読み込みます。適用前にスナップショットを書き出し、再選択してバックアップを検証してください。",
     "ui.popup.badge": "まず移動、削除は最後",
     "ui.popup.note":
       "このビルドはブックマークとフォルダーを移動し、読み込んだ計画が指示した場合はブックマークを改名します。URL の変更とフォルダーの改名は行わず、削除するのは Trash へ送って確認した項目だけです。",
@@ -575,9 +582,9 @@ export const MESSAGES = {
     "section.duplicates.send": "残りを 3 へ送る",
     "section.duplicates.hint":
       "グループごとに「残す 1 件」を選び、残りを 3 へ送ってまとめておくフォルダーへ移動します。この操作は移動だけで、ここでは削除しません。そのフォルダー（例: 「重複（要確認）」）はご自身でブラウザーのブックマークマネージャーから作り、ツリーを再読み込みしてから 3 の「移動先」で選んでください。",
-    "section.agent.title": "7. AI エージェントへの引き渡し（任意）",
+    "section.agent.title": "7. 計画JSONの受け渡し",
     "section.agent.note":
-      "任意です。1-5 はエージェントなしで使えます。移動の計画をエージェントに任せたい場合は、下のコンテキストファイルとプロンプトを渡してください。どちらも読み込んだツリーから生成します。",
+      "コンテキストとプロンプトをエージェントへ渡し、返ってきた計画JSONを読み込みます。ブラウザー操作環境のあるエージェントは、マネージャーのコマンドAPIも利用できます。",
     "section.agent.export": "エージェント向けコンテキストを書き出す (JSON)",
     "section.agent.scope": "配置対象",
     "section.agent.scope.all": "プロファイル全体",
@@ -1012,13 +1019,20 @@ export const MESSAGES = {
     "agent.error.inputNotObject": "{command} の引数はオブジェクトか省略です",
     "agent.error.unknownField": '{command} は "{field}" を受け付けません',
     "agent.error.query": "search には空でない query が必要です",
+    "agent.error.cursor":
+      "ページの続き指定が不正です。cursor を省略して最初から取得してください",
+    "agent.error.cursorMismatch":
+      "別の command または検索条件の cursor は使用できません",
+    "agent.error.staleCursor":
+      "ツリーまたは画面が再読み込みされました。取得済みページを破棄して最初から取得してください",
     "agent.error.limit": "{command} の limit は 1〜{limit} です",
     "agent.error.planNotObject": "loadPlan には計画文書自体を渡します",
     "agent.error.tooManyOperations":
       "計画の操作が {count} 件で、上限 {limit} 件を超えています",
-    "agent.error.noTree": "先にツリーを読み込んでください",
+    "agent.error.noTree":
+      "ツリーはまだ読み込まれていません。初回読込を待つか、失敗した場合は「ツリーを読み込む」で再試行してください",
     "agent.error.notReady":
-      '現在は実行できません。"{control}" が無効で、API はそれを迲回しません',
+      '現在は実行できません。"{control}" が無効で、API はそれを迂回しません',
     "agent.error.failed": "command が失敗しました: {message}",
     "agent.error.busy": "別の command が実行中です。この API は逐次実行です",
 

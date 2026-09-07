@@ -1,4 +1,9 @@
 node_modules/
+.env*
+*.pem
+*.key
+secrets/
+.vscode/
 dist/
 *.zip
 tmp/

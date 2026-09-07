@@ -1,10 +1,15 @@
-# Chrome Web Store submission draft — Splendid Bookmarks 0.4.0
+# Chrome Web Store submission draft — Splendid Bookmarks 0.5.0
 
 Paste-ready values for the Developer Dashboard. Every claim here is checked against the
 build; `npm run check:store` fails if the repository drifts from it.
 
-Source of truth for the artifact: `builds/splendid-bookmarks-v0.4.0.zip` (42 files,
-`manifest.json` at the archive root), built by `npm run zip`.
+Submission artifact: `builds/splendid-bookmarks-v0.5.0.zip` (42 runtime files,
+`manifest.json` at the archive root). Preserve the original 0.4.0 artifact.
+
+The revised listing copy below describes 0.5.0 capabilities. Verify its dashboard and
+publication state after submission. The short summary comes from the manifest's localized
+description, so changing the source here does not update the live store. See the
+[manifest description reference](https://developer.chrome.com/docs/extensions/reference/manifest/description).
 
 ## Submission record
 
@@ -24,7 +29,7 @@ the public store URL will carry, so it is recorded here rather than looked up ag
 | Field                  | Value                                                                   |
 | ---------------------- | ----------------------------------------------------------------------- |
 | Item name              | `Splendid Bookmarks`                                                    |
-| Summary (132 char max) | see below                                                               |
+| Summary (manifest, 132 char max) | localized `extensionDescription`; reference copy below                  |
 | Detailed description   | see [cws-listing.md](cws-listing.md)                                    |
 | Category               | `Workflow & Planning`                                                   |
 | Language               | `English` (plus a `日本語` locale in the listing)                       |
@@ -37,7 +42,7 @@ the public store URL will carry, so it is recorded here rather than looked up ag
 Summary:
 
 ```text
-Tidy bookmarks with a dry run, a verified backup, one-click rollback, a reversible Trash and a confirmed delete.
+Let coding agents search, move and rename your bookmarks, with dry runs, verified backups and rollback.
 ```
 
 ---
@@ -47,10 +52,11 @@ Tidy bookmarks with a dry run, a verified backup, one-click rollback, a reversib
 ### Single purpose
 
 ```text
-Splendid Bookmarks reorganises the bookmarks already in your browser. It reads the
-bookmark tree, reports duplicates, previews a batch of moves against the live tree, and
-applies, verifies, or rolls that batch back. It does one job — placing bookmarks — and it
-does it entirely on your own device.
+Splendid Bookmarks lets coding agents and users organise bookmarks stored in the browser.
+It reads and searches the tree, accepts move and title-change plans, previews changes,
+and applies, verifies or rolls them back. Its command API and JSON handoff serve the same
+single bookmark-management purpose. The extension performs its operations locally; it
+does not run an AI model or contact an AI service itself.
 ```
 
 ### Permission justification — `bookmarks`

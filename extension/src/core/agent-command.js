@@ -12,6 +12,7 @@
  * surface instead of scraping the DOM, not to decide who may act.
  */
 import { MAX_PLAN_OPERATIONS, MAX_RENDERED_ROWS } from "./limits.js";
+import { LocalizedError } from "./errors.js";
 
 export const AGENT_API_VERSION = 1;
 
@@ -32,6 +33,7 @@ export const AGENT_API_VERSION = 1;
  */
 export const COMMAND_NAMES = [
   "capabilities",
+  "getSession",
   "getStats",
   "getTree",
   "search",
@@ -46,9 +48,10 @@ export const COMMAND_NAMES = [
 /** Allowed input fields per command. Anything else is refused, not ignored. */
 const COMMAND_INPUTS = new Map([
   ["capabilities", []],
+  ["getSession", []],
   ["getStats", []],
-  ["getTree", ["limit"]],
-  ["search", ["query", "limit"]],
+  ["getTree", ["limit", "cursor"]],
+  ["search", ["query", "limit", "cursor"]],
   ["listTrash", []],
   ["loadPlan", ["plan"]],
   ["dryRun", []],
@@ -105,6 +108,28 @@ export function validateInvocation(command, input) {
   const badLimit = limitError(command, given.limit);
   if (badLimit) return { ok: false, ...badLimit };
 
+  if (given.cursor !== undefined) {
+    const cursor = given.cursor;
+    const fields = ["snapshotId", "offset", "command", "query"];
+    if (
+      !isPlainObject(cursor) ||
+      Object.keys(cursor).length !== fields.length ||
+      fields.some((field) => !Object.hasOwn(cursor, field)) ||
+      typeof cursor.snapshotId !== "string" ||
+      cursor.snapshotId.length === 0 ||
+      cursor.snapshotId.length > 160 ||
+      !Number.isSafeInteger(cursor.offset) ||
+      cursor.offset < 1 ||
+      typeof cursor.command !== "string" ||
+      typeof cursor.query !== "string"
+    ) {
+      return { ok: false, key: "agent.error.cursor" };
+    }
+    if (cursor.command !== command || cursor.query !== (given.query ?? "")) {
+      return { ok: false, key: "agent.error.cursorMismatch" };
+    }
+  }
+
   if (command === "loadPlan") {
     if (!isPlainObject(given.plan)) {
       return { ok: false, key: "agent.error.planNotObject" };
@@ -126,6 +151,32 @@ export function validateInvocation(command, input) {
     }
   }
   return { ok: true };
+}
+
+export function paginateEntries(
+  entries,
+  { command, snapshotId, query, limit, cursor },
+) {
+  const input = { limit, cursor, ...(command === "search" ? { query } : {}) };
+  const check = validateInvocation(command, input);
+  if (!check.ok) throw new LocalizedError(check.key, check.params);
+  if (cursor && cursor.snapshotId !== snapshotId) {
+    throw new LocalizedError("agent.error.staleCursor");
+  }
+  const offset = cursor?.offset ?? 0;
+  if (offset > entries.length) throw new LocalizedError("agent.error.cursor");
+  const shown = entries.slice(offset, offset + (limit ?? MAX_RENDERED_ROWS));
+  const nextOffset = offset + shown.length;
+  const truncated = nextOffset < entries.length;
+  return {
+    total: entries.length,
+    shown,
+    snapshotId,
+    truncated,
+    nextCursor: truncated
+      ? { snapshotId, offset: nextOffset, command, query: query ?? "" }
+      : null,
+  };
 }
 
 /** Fixed success shape. `state` is whatever the command reports. */
@@ -155,6 +206,11 @@ export function capabilitiesState() {
     limits: {
       maxPlanOperations: MAX_PLAN_OPERATIONS,
       maxRows: MAX_RENDERED_ROWS,
+    },
+    features: {
+      pagination: true,
+      sessionInfo: true,
+      automaticTreeLoad: true,
     },
     // Stated in the descriptor because an agent that discovers the API will not
     // have read the docs.

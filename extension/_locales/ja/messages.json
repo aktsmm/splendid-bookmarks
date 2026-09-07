@@ -3,7 +3,7 @@
     "message": "Splendid Bookmarks"
   },
   "extensionDescription": {
-    "message": "Dry Run とバックアップ検証のうえで移動を適用します。Trash へ送った項目はバッチ単位で元の並び順のまま戻せます。永続削除は確認付きの別ステップです。"
+    "message": "コーディングエージェントからブックマークを検索・移動・改名。Dry Run、バックアップ検証、ロールバックで整理を支援します。"
   },
   "actionTitle": {
     "message": "Splendid Bookmarks"

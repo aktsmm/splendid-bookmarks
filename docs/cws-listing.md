@@ -1,11 +1,15 @@
 # Chrome Web Store listing copy — Splendid Bookmarks
 
-Two locales. Paste the matching block into the Developer Dashboard after selecting the
-language at the top of the Store listing tab.
+Two locales. The summaries mirror the localized manifest description in the extension
+package; editing this document does not change the live summary. Paste each detailed
+description into the matching language in the Developer Dashboard's Store listing tab.
 
 Read this against the build before every submission. It must not claim the extension is
 read-only or that it cannot delete bookmarks: it can, from the Trash, after a confirmed
 two-step flow.
+
+This copy targets release 0.5.0. Use it with the matching package; dashboard submission
+and public availability must be verified separately.
 
 ---
 
@@ -14,62 +18,72 @@ two-step flow.
 ### Summary
 
 ```text
-Tidy bookmarks with a dry run, a verified backup, one-click rollback, a reversible Trash and a confirmed delete.
+Let coding agents search, move and rename your bookmarks, with dry runs, verified backups and rollback.
 ```
 
 ### Detailed description
 
 ```text
-Splendid Bookmarks reorganises the bookmarks you already have, without asking you to
-trust it blindly.
+Splendid Bookmarks is built for coding agents to work with your browser bookmarks.
+It gives an agent an API to inspect and search the tree, load an organisation plan,
+run a Dry Run, apply changes, verify the result and request rollback.
 
-Every batch is previewed before it runs. You export a snapshot of your tree first, the
-Dry Run checks each move against the live tree, and nothing is applied until you
-re-select that snapshot. If the result is not what you expected, one button puts the
-whole batch back where it came from.
+CONNECT YOUR AGENT
 
-WHAT IT DOES
+Direct operation requires a coding agent with browser automation access to the extension's
+manager page, for example through Chrome DevTools Protocol (CDP). Installing this extension
+does not connect your agent automatically. It does not include an AI model or contact an
+AI service itself. The manager automatically loads the tree when opened. Use getSession
+to check readiness; if loading fails, use Load tree to retry.
 
-• Reads your bookmark tree and reports how many URLs, folders and levels it holds
-• Finds duplicates by exact URL, or by a normalised URL that ignores tracking
-  parameters, trailing slashes, "www" and fragments
-• Quarantines duplicates: you pick the one copy to keep in each group, and the rest are
-  moved into a folder you choose. Nothing is deleted at this step
-• Lets you pick moves by hand, with a location filter and a search box, so it is useful
-  without any AI involved
-• Applies moves one at a time, verifies the resulting positions, and rolls the batch back
-  in reverse order on request
-• Restores positions from an exported snapshot, even after a reinstall
-• Sends bookmarks to a Trash folder you nominate, and puts a whole batch back in its
-  original order while the items are still there
+The entry point is window.splendidBookmarks.run(command, input). Commands include
+capabilities, getSession, getStats, getTree, search, listTrash, loadPlan, dryRun, apply,
+verify and rollback. Tree and search results are paginated, with up to 500 entries per
+page. Follow nextCursor to collect the rest. Reloading the tree invalidates older cursors.
+Reads respect the manager's operation locks, and getSession reports the current mode.
 
-ABOUT DELETING
+A separate inventory CLI is available in the project repository for Node.js 22
+and CDP. It verifies the selected tab, session and complete page counts before an optional
+JSON export. The CLI is not installed by adding this browser extension.
 
-Deleting is deliberately two steps. Sending to Trash is a move, and it is reversible.
-Deleting for good is separate: it needs a verified backup and a confirmation tick, it
-only ever touches items this extension put in the Trash, it deletes them one at a time,
-and it stops at the first item that no longer matches its record. That step cannot be
-undone. Recursive folder deletion does not exist in this extension.
+You can also export a context file and a ready-made prompt, ask an agent to prepare a
+plan, and import its JSON result without giving the agent browser access.
 
-PRIVACY
+WHAT YOU CAN DO
 
-Nothing is sent to the developer, to a server, or to any third party. There is no
-network code, no analytics, no telemetry and no host permissions. Two small records are
-kept on your own device so the reversible steps stay reversible: a journal of a running
-batch, and a Trash recovery ledger.
+• Inspect and search your bookmarks before deciding what to change
+• Ask an agent to propose moves into existing folders
+• Rename bookmark titles through a plan, without changing URLs or folder names
+• Preview, apply and verify a batch of moves or title changes, then request rollback
+• Find duplicate URLs and move the copies you select into a review folder
+• Use the same manager by hand when you do not need an agent
 
-OPTIONAL: AI AGENTS
+REVIEW BEFORE APPLYING
 
-If you want an AI assistant to propose the moves, the extension can export a context
-file and a ready-made prompt, and can load the plan the assistant returns. That path is
-entirely optional, and it changes nothing about the safety gates: a loaded plan still
-goes through the same Dry Run, the same backup requirement and the same confirmation as
-one you built by hand. The extension never contacts an AI service itself.
+Export a snapshot, review the Dry Run and re-select the backup file to verify it before
+applying a plan. The API follows the same controls as the manager; it does not replace
+the backup-file selection step. An agent's browser access is not sandboxed by this API.
+Rollback is available for a batch, but it can stop if items have changed in the meantime.
+An exported snapshot can restore positions; reverting a title change requires batch rollback.
 
-PERMISSIONS
+TRASH AND PERMANENT DELETION
 
-"bookmarks" to read and reorganise your bookmarks, and "storage" for the two local
-records above. Nothing else is requested.
+Sending bookmarks to Trash is a reversible move. Permanent deletion is a separate,
+confirmed action in the manager: it requires a verified backup, checks each recorded
+item and stops on a mismatch. That deletion cannot be undone by this extension.
+Recursive folder deletion is not supported.
+
+PRIVACY AND PERMISSIONS
+
+The extension itself does not send bookmark data to the developer or an AI service.
+It has no network requests, analytics, telemetry or host permissions. Recovery records
+and your language preference stay on your device.
+
+If you share context with an external agent or give it browser access, that tool may
+process bookmark titles and URLs under its own settings and privacy policy.
+
+Permissions: "bookmarks" for reading and organising bookmarks, and "storage" for the
+local execution journal and Trash recovery ledger. No AI subscription is bundled.
 ```
 
 ---
@@ -79,54 +93,68 @@ records above. Nothing else is requested.
 ### 概要
 
 ```text
-Dry Run、検証済みバックアップ、ワンクリックのロールバック、可逆な Trash と確認付き削除でブックマークを整理します。
+コーディングエージェントからブックマークを検索・移動・改名。Dry Run、バックアップ検証、ロールバックで整理を支援します。
 ```
 
 ### 詳細な説明
 
 ```text
-Splendid Bookmarks は、いまあるブックマークを整理するための拡張機能です。盲目的に信用する
-ことを求めません。
+Splendid Bookmarks は、コーディングエージェントからブラウザーのブックマークを操作するための
+拡張機能です。専用APIを通じてツリーの確認・検索、整理計画の読み込み、Dry Run、適用、検証、
+ロールバックを行えます。
 
-すべてのバッチは実行前にプレビューされます。先にツリーのスナップショットを書き出し、Dry Run
-が 1 件ずつライブツリーと照合し、そのスナップショットを選び直すまで何も適用されません。結果
-が想定と違えば、ボタン 1 つでバッチ全体を元の位置へ戻せます。
+エージェントとの接続
+
+直接操作には、CDP（Chrome DevTools Protocol）などで拡張機能のマネージャー画面を操作できる
+コーディングエージェント環境が必要です。インストールだけでエージェントと自動接続するわけでは
+ありません。AIモデルは内蔵しておらず、拡張機能自身がAIサービスに接続することもありません。
+マネージャーを開くとツリーを自動で読み込みます。getSessionで準備状態を確認し、失敗した場合は
+「ツリーを読み込む」で再試行してください。
+
+操作の入口は window.splendidBookmarks.run(command, input) です。capabilities、getSession、
+getStats、getTree、search、listTrash、loadPlan、dryRun、apply、verify、rollback を利用できます。
+ツリー取得と検索は1ページ最大500項目で、nextCursorを使って続きを取得できます。ツリーの
+再読込後は古いcursorを拒否します。読取APIも画面の操作ロックに従い、getSessionで現在の
+実行モードを確認できます。
+
+リポジトリにはNode.js 22とCDPを使う一覧取得CLIもあります。対象タブ・セッション・
+全件数を検証してから必要に応じてJSONを保存します。CLIは拡張機能のインストールには含まれません。
+
+ブラウザーへのアクセスを与えず、コンテキストファイルと定型プロンプトをエージェントへ渡し、
+返ってきた計画JSONを読み込む使い方もできます。
 
 できること
 
-• ブックマークツリーを読み込み、URL 数・フォルダ数・階層の深さを表示します
-• 重複を検出します。完全一致に加えて、トラッキングパラメータ・末尾スラッシュ・www・
-  フラグメントを無視する正規化 URL でも検出できます
-• 重複の隔離: グループごとに残す 1 件を自分で選び、残りを指定したフォルダーへ移動します。
-  この段階で削除されるものはありません
-• 場所の絞り込みと検索で、移動したい項目を自分で選べます。AI なしで使えます
-• 移動を 1 件ずつ適用し、適用後の位置を照合し、必要なら逆順でロールバックします
-• 書き出したスナップショットから位置を復元します。再インストール後でも動きます
-• 指定した Trash フォルダーへ退避し、項目がそこに残っている間はバッチ単位で元の並び順ごと
-  戻せます
+• 変更前にブックマークの一覧や検索結果を確認する
+• エージェントに既存フォルダーへの移動案を作らせる
+• 計画を通じてブックマークのタイトルを変更する（URL変更・フォルダー改名は対象外）
+• 移動・改名のバッチをプレビューし、適用・検証・ロールバックを行う
+• 重複URLを検出し、自分で選んだコピーを確認用フォルダーへ移動する
+• エージェントを使わず、同じマネージャーで手動整理する
 
-削除について
+適用前の確認
 
-削除は意図的に 2 段階です。Trash への退避は移動であり、元に戻せます。永続削除はそれとは別で、
-検証済みバックアップと確認チェックが必要で、この拡張機能が Trash に入れた項目だけを対象に、
-1 件ずつ照合しながら削除し、記録と一致しない項目が現れた時点で停止します。この操作は元に
-戻せません。フォルダーごとの再帰削除は、この拡張機能には存在しません。
+スナップショットを書き出し、Dry Runを確認し、バックアップファイルを再選択して検証してから
+計画を適用します。APIも画面と同じ操作条件に従い、バックアップ再選択を代行しません。
+このAPIは、エージェントに与えたブラウザー操作権限を制限する仕組みではありません。
+バッチはロールバックできますが、その後に項目が変更されている場合は停止することがあります。
+スナップショットから復元できるのは配置で、改名を戻すにはバッチのロールバックが必要です。
 
-プライバシー
+Trashと永続削除
 
-開発者・サーバー・第三者のいずれに対してもデータを送信しません。ネットワークコード、
-アナリティクス、テレメトリ、ホスト権限のいずれもありません。可逆な操作を可逆に保つために、
-実行中バッチのジャーナルと Trash の復元台帳の 2 つだけを端末内に保持します。
+Trashへの退避は元に戻せる移動です。永続削除はマネージャー上の別の確認付き操作で、
+検証済みバックアップを必要とし、記録した項目を1件ずつ照合して不一致があれば停止します。
+永続削除した項目はこの拡張機能では元に戻せません。フォルダーごとの再帰削除は非対応です。
 
-任意: AI エージェント
+プライバシーと権限
 
-移動案を AI アシスタントに考えさせたい場合は、コンテキストファイルと定型プロンプトを書き出し、
-返ってきた計画を読み込めます。この経路は完全に任意で、安全ゲートは何も変わりません。読み込んだ
-計画も、手で作った計画とまったく同じ Dry Run、同じバックアップ要件、同じ確認を通ります。
-拡張機能自身が AI サービスへ接続することはありません。
+拡張機能自身は開発者やAIサービスへブックマークデータを送信しません。ネットワーク通信、
+アナリティクス、テレメトリ、ホスト権限はありません。復元用の記録と表示言語の設定は端末内に
+保持します。
 
-権限
+外部エージェントにコンテキストを渡したりブラウザー操作を許可したりすると、そのツールの設定・
+プライバシーポリシーに従ってブックマークのタイトルやURLが処理される可能性があります。
 
-ブックマークの読み取りと整理のための "bookmarks"、上記 2 つのローカル記録のための "storage"。
-それ以外は要求しません。
+権限は読み取り・整理用の "bookmarks" と、実行ジャーナル・Trash復元台帳用の "storage" です。
+AIサービスの利用契約は付属しません。
 ```
