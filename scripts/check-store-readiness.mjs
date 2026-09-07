@@ -149,23 +149,47 @@ if (!existsSync(listingCopyPath)) {
   const flat = pastedListingCopy(markdown);
   try {
     const listings = extractStoreListings(markdown);
-    check("listing fields have unique locale and field headings", true, "en/ja summaries and descriptions");
+    check(
+      "listing fields have unique locale and field headings",
+      true,
+      "en/ja summaries and descriptions",
+    );
     check(
       "listing locales match manifest locales",
-      JSON.stringify(Object.keys(listings).sort()) === JSON.stringify([...localeDescriptions.keys()].sort()),
+      JSON.stringify(Object.keys(listings).sort()) ===
+        JSON.stringify([...localeDescriptions.keys()].sort()),
     );
     for (const [locale, listing] of Object.entries(listings)) {
-      check(`${locale}: listing summary matches the package description`,
-        listingCopyMatches(listing.summary, localeDescriptions.get(locale) ?? ""));
-      check(`${locale}: detailed description is within 16000 characters`,
-        listing.description.length <= 16000, `${listing.description.length} characters`);
-      check(`${locale}: detailed description avoids blanket read-only or no-delete claims`,
-        !claimsReadOnly(listing.description) && !claimsCannotDelete(listing.description));
-      check(`${locale}: detailed description discloses irreversible deletion`,
-        /cannot be undone|irreversible|元に戻せません/i.test(listing.description));
+      check(
+        `${locale}: listing summary matches the package description`,
+        listingCopyMatches(
+          listing.summary,
+          localeDescriptions.get(locale) ?? "",
+        ),
+      );
+      check(
+        `${locale}: detailed description is within 16000 characters`,
+        listing.description.length <= 16000,
+        `${listing.description.length} characters`,
+      );
+      check(
+        `${locale}: detailed description avoids blanket read-only or no-delete claims`,
+        !claimsReadOnly(listing.description) &&
+          !claimsCannotDelete(listing.description),
+      );
+      check(
+        `${locale}: detailed description discloses irreversible deletion`,
+        /cannot be undone|irreversible|元に戻せません/i.test(
+          listing.description,
+        ),
+      );
     }
   } catch (error) {
-    check("listing fields have unique locale and field headings", false, error.message);
+    check(
+      "listing fields have unique locale and field headings",
+      false,
+      error.message,
+    );
   }
   check(
     "store listing copy is drafted in the repository",

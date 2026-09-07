@@ -27,13 +27,17 @@ export function claimsCannotDelete(text) {
 }
 
 export function normalizeListingText(text) {
-  if (typeof text !== "string") throw new TypeError("Listing text must be a string");
+  if (typeof text !== "string")
+    throw new TypeError("Listing text must be a string");
   return text.replace(/\r\n?/g, "\n");
 }
 
 function textBlocks(markdown) {
-  return [...normalizeListingText(markdown).matchAll(/^```text[ \t]*\n([\s\S]*?)\n```[ \t]*(?:\n|$)/gm)]
-    .map((match) => match[1]);
+  return [
+    ...normalizeListingText(markdown).matchAll(
+      /^```text[ \t]*\n([\s\S]*?)\n```[ \t]*(?:\n|$)/gm,
+    ),
+  ].map((match) => match[1]);
 }
 
 export function extractStoreListings(markdown) {
@@ -45,13 +49,22 @@ export function extractStoreListings(markdown) {
   ];
   const listings = {};
   for (const [locale, heading, summaryHeading, descriptionHeading] of formats) {
-    const matches = sections.filter((section) => section.split("\n")[0].trim() === heading);
-    if (matches.length !== 1) throw new Error(`Expected one ${locale} listing section`);
+    const matches = sections.filter(
+      (section) => section.split("\n")[0].trim() === heading,
+    );
+    if (matches.length !== 1)
+      throw new Error(`Expected one ${locale} listing section`);
     const fields = matches[0].split(/^###[ \t]+/m).slice(1);
     listings[locale] = {};
-    for (const [field, title] of [["summary", summaryHeading], ["description", descriptionHeading]]) {
-      const candidates = fields.filter((section) => section.split("\n")[0].trim() === title);
-      if (candidates.length !== 1) throw new Error(`Expected one ${locale}.${field} heading`);
+    for (const [field, title] of [
+      ["summary", summaryHeading],
+      ["description", descriptionHeading],
+    ]) {
+      const candidates = fields.filter(
+        (section) => section.split("\n")[0].trim() === title,
+      );
+      if (candidates.length !== 1)
+        throw new Error(`Expected one ${locale}.${field} heading`);
       const blocks = textBlocks(candidates[0]);
       if (blocks.length !== 1 || blocks[0].trim().length === 0) {
         throw new Error(`Expected one nonempty ${locale}.${field} text block`);
@@ -68,7 +81,9 @@ export function extractStoreListings(markdown) {
 export function listingCopyMatches(expected, actual) {
   const source = normalizeListingText(expected);
   const saved = normalizeListingText(actual);
-  return source.trim().length > 0 && saved.trim().length > 0 && source === saved;
+  return (
+    source.trim().length > 0 && saved.trim().length > 0 && source === saved
+  );
 }
 
 /**
