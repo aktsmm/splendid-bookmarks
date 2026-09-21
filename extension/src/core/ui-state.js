@@ -29,6 +29,7 @@ const RUNNING = new Set([MODE.APPLYING, MODE.ROLLING_BACK, MODE.RESTORING]);
 export function deriveControlState({
   loading = false,
   hasTree = false,
+  agentScopeMissing = false,
   hasPlan = false,
   mode = MODE.IDLE,
   backupVerified = false,
@@ -60,7 +61,11 @@ export function deriveControlState({
     "send-duplicates":
       treeDependent || !hasDuplicateReport || !hasKeeper || !hasDestination,
     "agent-scope": treeDependent,
-    "export-agent-context": treeDependent,
+    "agent-goal": treeDependent,
+    "agent-profile-label": treeDependent,
+    "agent-cdp-url": treeDependent,
+    "copy-agent-prompt": treeDependent || agentScopeMissing,
+    "export-agent-context": treeDependent || agentScopeMissing,
     "builder-source": treeDependent,
     "builder-filter": treeDependent,
     "builder-destination": treeDependent,
@@ -104,6 +109,21 @@ export function deriveControlState({
 }
 
 export const CONTROL_IDS = Object.keys(deriveControlState());
+
+export function agentReadiness({
+  loading,
+  hasTree,
+  mode,
+  scopeMissing,
+  loadFailed,
+}) {
+  if (loading) return { key: "agent.ready.loading", kind: "info" };
+  if (RUNNING.has(mode)) return { key: "agent.ready.busy", kind: "info" };
+  if (loadFailed) return { key: "agent.ready.failed", kind: "error" };
+  if (!hasTree) return { key: "agent.ready.loading", kind: "info" };
+  if (scopeMissing) return { key: "agent.scope.missing", kind: "warn" };
+  return { key: "agent.ready.loaded", kind: "ok" };
+}
 
 /**
  * `keep` leaves the current status alone; `clear` only ever removes the

@@ -1,5 +1,9 @@
 import assert from "node:assert/strict";
 import test from "node:test";
+import { readFileSync } from "node:fs";
+import { runInNewContext } from "node:vm";
+import { buildAgentTreeRows } from "../extension/src/core/agent-export.js";
+import { flattenTree } from "../extension/src/core/tree-model.js";
 import {
   paginateEntries,
   validateInvocation,
@@ -9,6 +13,52 @@ const entries = Array.from({ length: 1203 }, (_, index) => ({
   id: String(index),
 }));
 const scope = { command: "getTree", snapshotId: "page-one:1" };
+
+test("page handlers only build returned rows and resolve roots outside the page", () => {
+  const source = readFileSync(new URL("../extension/ui/options.js", import.meta.url), "utf8").replace(/\r\n/g, "\n");
+  const tree = flattenTree([{ id: "0", children: [{
+    id: "1", parentId: "0", title: "Bar", syncing: true,
+    children: Array.from({ length: 1200 }, (_, index) => ({
+      id: `bookmark-${index}`, parentId: "1", syncing: true,
+      title: index % 200 === 0 ? "Needle" : "Other",
+      url: `https://example.com/${index}`,
+    })),
+  }] }]);
+  for (const command of ["getTree", "search"]) {
+    const handler = new RegExp(`${command}: (\\(\\{[^\\n]+\\}\\) => \\{[\\s\\S]*?\\n  \\}),`).exec(source)?.[1];
+    assert.ok(handler, command);
+    const projected = [];
+    let blocked = false;
+    const run = runInNewContext(`(${handler})`, {
+      requireTree: () => { if (blocked) throw new Error("read locked"); return tree; },
+      agentSnapshotId: () => scope.snapshotId,
+      paginateEntries,
+      buildAgentTreeRows: (allEntries, selected = allEntries) => {
+        assert.equal(allEntries, tree);
+        projected.push(...selected.map((entry) => entry.id));
+        assert.ok(selected.length <= 500);
+        return buildAgentTreeRows(allEntries, selected);
+      },
+    });
+    let cursor;
+    const collected = [];
+    do {
+      const page = run({ limit: 500, query: "Needle", cursor });
+      assert.equal(page.snapshotId, scope.snapshotId);
+      collected.push(...page.shown);
+      cursor = page.nextCursor;
+    } while (cursor);
+    const expected = command === "getTree" ? tree : tree.filter((entry) => entry.title === "Needle");
+    assert.deepEqual(projected, expected.map((entry) => entry.id));
+    assert.deepEqual(collected, buildAgentTreeRows(tree, expected));
+    assert.ok(collected.filter((entry) => !entry.isFolder).every((entry) => entry.boundary === "syncing:true"));
+    const count = projected.length;
+    assert.throws(() => run({ query: "Needle", cursor: { snapshotId: "old:1", offset: 500, command, query: command === "search" ? "Needle" : "" } }), (error) => error.key === "agent.error.staleCursor");
+    blocked = true;
+    assert.throws(() => run({ query: "Needle" }), /read locked/);
+    assert.equal(projected.length, count);
+  }
+});
 
 test("all pages preserve order and contain every node exactly once", () => {
   const collected = [];

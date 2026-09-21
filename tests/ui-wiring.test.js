@@ -3,6 +3,7 @@ import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { fileURLToPath } from "node:url";
 import test from "node:test";
+import { runInNewContext } from "node:vm";
 
 import { DEFAULT_LOCALE, MESSAGES } from "../extension/src/core/messages.js";
 import { CONTROL_IDS } from "../extension/src/core/ui-state.js";
@@ -39,6 +40,115 @@ function referencedKeys(script) {
     ...matchAll(script, /\bsetStatus\(\s*"[\w-]+"\s*,\s*"([^"]+)"/g),
   ]);
 }
+
+test("only the latest copy attempt can announce success or open fallback", async () => {
+  const source = read("options.js");
+  const body = /async function copyAgentPrompt\(\) \{[\s\S]*?\n\}/.exec(
+    source,
+  )?.[0];
+  assert.ok(body);
+  assert.match(source, /function renderAgentPrompt[^]*?state\.copySeq \+= 1/);
+  for (const olderFails of [false, true]) {
+    const state = { generation: 1, copySeq: 0 };
+    const writes = [];
+    const statuses = [];
+    const prompt = {
+      value: "same instructions",
+      focus() {
+        assert.fail("stale fallback focused");
+      },
+      select() {},
+    };
+    const block = { open: false };
+    const controls = {
+      "agent-prompt": prompt,
+      "agent-prompt-block": block,
+      "agent-cdp-url": { checkValidity: () => true },
+      "agent-goal": { reportValidity: () => true },
+    };
+    const copy = runInNewContext(`(${body})`, {
+      state,
+      requireControl: () => {},
+      renderAgentPrompt: () => {
+        state.copySeq += 1;
+      },
+      el: (id) => controls[id],
+      navigator: {
+        clipboard: {
+          writeText: () =>
+            new Promise((resolve, reject) => writes.push({ resolve, reject })),
+        },
+      },
+      setStatus: (...args) => statuses.push(args),
+    });
+    const older = copy();
+    const latest = copy();
+    writes[1].resolve();
+    await latest;
+    if (olderFails) writes[0].reject(new Error("denied"));
+    else writes[0].resolve();
+    await older;
+    assert.equal(statuses.length, 1);
+    assert.equal(statuses[0][1], "agent.copy.done");
+    assert.equal(block.open, false);
+  }
+});
+
+test("backup shortcut preserves a loaded plan and stops after a failed initial load", async () => {
+  const body = /async function quickStart\(\) \{[\s\S]*?\n\}/.exec(
+    read("options.js"),
+  )?.[0];
+  assert.ok(body);
+  for (const scenario of ["loaded", "empty", "failed", "retry"]) {
+    const state = {
+      entries: scenario === "loaded" || scenario === "retry" ? [] : null,
+      generation: 1,
+      treeLoadFailed: scenario === "retry",
+      plan: { operations: [] },
+    };
+    const plan = state.plan;
+    const calls = [];
+    const save = runInNewContext(`(${body})`, {
+      state,
+      requireControl: () => {},
+      loadTree: async () => {
+        calls.push("load");
+        if (scenario !== "failed") {
+          state.generation += 1;
+          state.treeLoadFailed = false;
+        }
+      },
+      exportTree: async () => calls.push("export"),
+      focusResult: () => calls.push("retry-required"),
+    });
+    await save();
+    assert.equal(state.plan, plan);
+    assert.deepEqual(
+      calls,
+      scenario === "loaded"
+        ? ["export"]
+        : scenario === "failed"
+          ? ["load"]
+          : scenario === "retry"
+            ? ["retry-required"]
+            : ["load", "export"],
+    );
+  }
+});
+
+test("workflow links resolve to focusable sections without duplicate ids", () => {
+  const markup = read("options.html");
+  const ids = matchAll(markup, /\bid="([\w-]+)"/g);
+  assert.equal(ids.length, new Set(ids).size);
+  const links = matchAll(markup, /href="#([\w-]+)"/g);
+  assert.equal(links.length, 7);
+  for (const id of links) {
+    assert.match(
+      markup,
+      new RegExp(`<section[^>]*id="${id}"[^>]*tabindex="-1"`),
+    );
+  }
+});
 
 for (const { script, markup } of PAGES) {
   test(`${script} only touches element ids that ${markup} declares`, () => {

@@ -93,3 +93,91 @@ test("missing trees and reloads retain distinct readiness failures", () => {
     (error) => error.key === "agent.error.notReady",
   );
 });
+
+test("refresh reports failure even if a new generation was committed before the error", async () => {
+  const body = /refreshTree: async \(\) => \{([\s\S]*?)\n  \},/.exec(
+    source,
+  )?.[1];
+  assert.ok(body);
+  for (const scenario of ["read-failed", "setup-failed", "loaded"]) {
+    const state = { generation: 1, treeLoadFailed: false, treeDigest: "old" };
+    const refresh = runInNewContext(`async () => {${body}\n}`, {
+      state,
+      requireControl: () => {},
+      LocalizedError,
+      loadTree: async () => {
+        if (scenario !== "read-failed") state.generation += 1;
+        state.treeLoadFailed = scenario !== "loaded";
+      },
+      agentSessionId: "session",
+      agentSnapshotId: () => `session:${state.generation}`,
+    });
+    if (scenario === "loaded") {
+      assert.equal((await refresh()).snapshotId, "session:2");
+    } else {
+      await assert.rejects(
+        refresh(),
+        (error) => error.key === "agent.error.refreshFailed",
+      );
+    }
+  }
+});
+
+test("plan loading never reports another UI request as its own accepted plan", async () => {
+  const body = /loadPlan: async \(\{ plan \}\) => \{([\s\S]*?)\n  \},/.exec(
+    source,
+  )?.[1];
+  assert.ok(body);
+  for (const scenario of ["accepted", "invalid", "replaced"]) {
+    const state = { planSeq: 4, plan: null, planDigest: null };
+    const load = runInNewContext(`async ({ plan }) => {${body}\n}`, {
+      state,
+      File,
+      requireControl: () => {},
+      LocalizedError,
+      statusOf: () => ({ kind: "ok" }),
+      loadPlan: async () => {
+        state.planSeq += 1;
+        if (scenario === "replaced") state.planSeq += 1;
+        state.plan =
+          scenario === "invalid" ? null : { version: 2, operations: [] };
+        state.planDigest = scenario;
+      },
+    });
+    if (scenario === "replaced") {
+      await assert.rejects(
+        load({ plan: {} }),
+        (error) => error.key === "agent.error.superseded",
+      );
+      assert.equal(state.planDigest, "replaced");
+    } else {
+      const result = await load({ plan: {} });
+      assert.equal(result.accepted, scenario === "accepted");
+      assert.equal(result.planDigest, scenario);
+    }
+  }
+});
+
+test("apply refuses a different approved plan before executing", async () => {
+  const body = /apply: async \(\{ planDigest \}\) => \{([\s\S]*?)\n  \},/.exec(
+    source,
+  )?.[1];
+  assert.ok(body);
+  let calls = 0;
+  const apply = runInNewContext(`async ({ planDigest }) => {${body}\n}`, {
+    state: { planDigest: "a".repeat(64), journal: null, mode: "applied" },
+    requireControl: () => {},
+    LocalizedError,
+    applyMoves: async () => {
+      calls += 1;
+    },
+    statusOf: () => ({ kind: "ok" }),
+  });
+  await assert.rejects(
+    apply({ planDigest: "b".repeat(64) }),
+    (error) => error.key === "agent.error.planDigest",
+  );
+  assert.equal(calls, 0);
+  await apply({ planDigest: "a".repeat(64) });
+  assert.equal(calls, 1);
+});

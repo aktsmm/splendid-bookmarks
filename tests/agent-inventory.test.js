@@ -75,6 +75,47 @@ test("collector refuses the wrong session or an unready tree before listing", as
   assert.ok(!loading.calls.includes("getTree"));
 });
 
+test("collector rejects mismatched stats identity before requesting any tree page", async () => {
+  for (const changed of [
+    { snapshotId: "session-one:2" },
+    { sessionId: "other-session" },
+  ]) {
+    const { call, calls } = fakeCall((command, result) => {
+      if (command === "getStats") Object.assign(result.state, changed);
+      return result;
+    });
+    await assert.rejects(
+      collectInventory(call, { sessionId: session.sessionId }),
+      /Snapshot changed before collection/,
+    );
+    assert.ok(!calls.includes("getTree"));
+  }
+});
+
+test("collector preserves empty root and bookmark titles as data", async () => {
+  const { call } = fakeCall((command, result) => {
+    if (command === "getTree") {
+      result.state.shown = result.state.shown.map((entry) =>
+        entry.id === "0" ? { ...entry, title: "", url: null, path: [] }
+          : entry.id === "1" ? { ...entry, title: "", path: ["Folder", ""] }
+            : entry,
+      );
+    }
+    if (command === "getStats") {
+      result.state.bookmarks -= 1;
+      result.state.folders += 1;
+    }
+    return result;
+  });
+  const result = await collectInventory(call, { sessionId: session.sessionId });
+  assert.equal(result.entries[0].title, "");
+  assert.equal(result.entries[0].url, null);
+  assert.deepEqual(result.entries[0].path, []);
+  assert.equal(result.entries[1].title, "");
+  assert.equal(result.entries[1].url, entries[1].url);
+  assert.equal(result.total, entries.length);
+});
+
 test("collector never treats the old capped API as a complete inventory", async () => {
   const { call } = fakeCall((command, result) => {
     if (command === "capabilities") delete result.state.features;

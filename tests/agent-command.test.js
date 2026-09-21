@@ -21,6 +21,7 @@ import { exposeAgentApi } from "../extension/ui/agent-api.js";
 const EXPECTED_COMMANDS = [
   "capabilities",
   "getSession",
+  "refreshTree",
   "getStats",
   "getTree",
   "search",
@@ -54,11 +55,16 @@ test("capabilities names its own limits and says what it is not", () => {
   const state = capabilitiesState();
   assert.deepEqual(state.commands, EXPECTED_COMMANDS);
   assert.equal(state.limits.maxPlanOperations, 5000);
+  assert.equal(state.limits.maxBatchOperations, 200);
   assert.equal(state.limits.maxRows, 500);
   assert.deepEqual(state.features, {
     pagination: true,
     sessionInfo: true,
     automaticTreeLoad: true,
+    treeMetadata: true,
+    structuredResults: true,
+    refreshTree: true,
+    planBinding: true,
   });
   assert.deepEqual(state.notes, {
     applyNeedsHumanBackup: true,
@@ -84,6 +90,8 @@ test("unknown commands, fields and input shapes are refused", () => {
     ["getTree", { limit: -1 }, "agent.error.limit"],
     ["loadPlan", {}, "agent.error.planNotObject"],
     ["loadPlan", { plan: "{}" }, "agent.error.planNotObject"],
+    ["apply", { planDigest: "bad" }, "agent.error.planDigest"],
+    ["apply", { planDigest: null }, "agent.error.planDigest"],
   ];
   for (const [command, input, key] of cases) {
     const result = validateInvocation(command, input);
@@ -120,6 +128,8 @@ test("accepted invocations are accepted", () => {
     ["loadPlan", { plan: { version: 2, operations: [] } }],
     ["dryRun", {}],
     ["apply", {}],
+    ["apply", { planDigest: "a".repeat(64) }],
+    ["refreshTree", {}],
     ["verify", {}],
     ["rollback", {}],
   ];
@@ -367,6 +377,7 @@ test("the options page wires the API to its own controls, not to the adapters", 
   const body = source.slice(start, source.indexOf("\n});", start));
 
   for (const gated of [
+    ['requireControl("load-tree")', "refreshTree"],
     ['requireControl("plan-file")', "loadPlan"],
     ['requireControl("dry-run")', "dryRun"],
     ['requireControl("apply-moves")', "apply"],

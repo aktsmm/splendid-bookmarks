@@ -21,6 +21,11 @@ export const MESSAGES = {
     actionTitle: "Splendid Bookmarks",
 
     "ui.language": "Language",
+    "agent.error.superseded":
+      "Another plan replaced this request. Review the current plan before continuing.",
+    "agent.error.refreshFailed":
+      "The tree refresh failed. Check the tree status and retry before using these results.",
+    "ui.safetyDetails": "Safety and backups",
     "ui.badge.writeScope":
       "It moves bookmarks and folders, renames a bookmark when a plan asks it to, creates the one Trash folder you ask for, and deletes only what you confirm from the Trash",
     "ui.intro":
@@ -28,12 +33,20 @@ export const MESSAGES = {
     "ui.popup.badge": "Move first, delete last",
     "ui.popup.note":
       "This build moves bookmarks and folders, and can rename a bookmark when a loaded plan asks for it. It never changes a URL or renames a folder, and it only deletes items you have sent to the Trash and confirmed.",
-    "ui.popup.open": "Open manager",
+    "ui.popup.open": "Open agent workspace",
 
-    "section.quickstart.title": "Start here",
+    "nav.title": "Workflow",
+    "nav.agent": "Agent",
+    "nav.tree": "Live tree",
+    "nav.duplicates": "Duplicates",
+    "nav.plan": "Plan",
+    "nav.apply": "Apply",
+    "nav.restore": "Restore",
+    "nav.trash": "Trash",
+    "section.quickstart.title": "Backup before applying",
     "section.quickstart.note":
-      "New here? This runs both buttons in step 1 for you: it reads your bookmarks and saves a backup file. Nothing else runs, and nothing is moved until you pick the moves in step 3 and re-select that backup in step 4.",
-    "section.quickstart.run": "Load the tree and save a backup",
+      "Save the current snapshot, then select the saved file in step 4. Your current plan and Dry Run are retained. Nothing is applied by saving a backup.",
+    "section.quickstart.run": "Save backup",
     "section.tree.title": "1. Live tree",
     "section.tree.load": "Load tree",
     "section.tree.export": "Export snapshot",
@@ -46,14 +59,39 @@ export const MESSAGES = {
     "section.duplicates.send": "Send the rest to step 3",
     "section.duplicates.hint":
       'Pick the one copy to keep in each group, then send the rest to step 3 and move them into a folder you keep them in. This step only moves them; nothing is deleted here. Create that folder yourself in your browser\'s bookmark manager first (for example "Duplicates (review)"), reload the tree, then choose it under "Move them into" in step 3.',
-    "section.agent.title": "7. Agent plan files",
-    "section.agent.note":
-      "Export the context and prompt for your agent, then import its plan JSON. Agents with browser automation access can also use the manager's command API.",
+    "section.agent.title": "Organize with an agent",
+    "section.agent.note": "Propose first. Apply only after approval.",
     "section.agent.export": "Export agent context (JSON)",
     "section.agent.scope": "Bookmarks to place",
     "section.agent.scope.all": "Everything in the profile",
-    "section.agent.copyHint":
-      "Select the text below and copy it yourself — this extension never touches your clipboard.",
+    "section.agent.copyHint": "Agent instructions",
+    "section.agent.copy": "Copy agent instructions",
+    "section.agent.goal": "Goal",
+    "section.agent.goal.review": "Review placement",
+    "section.agent.goal.empty": "Empty selected folder",
+    "section.agent.connection": "Connection details (optional)",
+    "section.agent.profileLabel": "Profile label (user supplied)",
+    "section.agent.cdpUrl": "Local CDP endpoint (if known)",
+    "section.agent.preview": "Instruction preview",
+    "section.agent.files": "File handoff (offline alternative)",
+    "section.agent.filePrompt": "Instructions for the exported file",
+    "agent.copy.done": "Instructions copied.",
+    "agent.ready.loading": "Reading bookmarks...",
+    "agent.ready.busy":
+      "An operation is running. Agent handoff is temporarily unavailable.",
+    "agent.ready.failed":
+      "The tree could not be refreshed. Retry in Live tree before continuing.",
+    "agent.ready.loaded":
+      "Ready to hand off. Browser connection is checked by your agent.",
+    "agent.scope.missing":
+      "The selected folder is no longer available. Choose another scope; it has not been changed to the whole profile.",
+    "agent.scope.unavailable": "Unavailable folder (choose another)",
+    "agent.copy.fallback":
+      "Clipboard unavailable. The instructions are selected below; copy them manually.",
+    "agent.connection.invalid":
+      "Enter a local HTTP endpoint without credentials, path, query or fragment.",
+    "agent.goal.scopeRequired":
+      "Choose a folder before selecting the empty-folder goal.",
     "agent.stats":
       "{bookmarks} bookmarks / {folders} folders / {boundaries} boundary group(s)",
     "agent.scope.summary":
@@ -484,6 +522,8 @@ export const MESSAGES = {
 
     "agent.error.unknownCommand": "that command is not part of this API",
     "agent.error.inputNotObject": "{command} takes an object, or nothing",
+    "agent.error.planDigest":
+      "The approved plan digest is invalid or no longer matches. Review and approve the current plan again.",
     "agent.error.unknownField": '{command} does not accept a "{field}" field',
     "agent.error.query": "search needs a non-empty query string",
     "agent.error.cursor":
@@ -557,6 +597,11 @@ export const MESSAGES = {
     actionTitle: "Splendid Bookmarks",
 
     "ui.language": "表示言語",
+    "agent.error.superseded":
+      "この要求は別の計画に置き換えられました。現在の計画を確認してから続行してください。",
+    "agent.error.refreshFailed":
+      "ツリーの再取得に失敗しました。読込状態を確認し、再試行してから結果を使用してください。",
+    "ui.safetyDetails": "安全性とバックアップ",
     "ui.badge.writeScope":
       "ブックマークとフォルダーの移動、計画が指示した場合のブックマーク改名、依頼された Trash フォルダーの作成、Trash から確認した項目の削除だけを行います",
     "ui.intro":
@@ -564,12 +609,20 @@ export const MESSAGES = {
     "ui.popup.badge": "まず移動、削除は最後",
     "ui.popup.note":
       "このビルドはブックマークとフォルダーを移動し、読み込んだ計画が指示した場合はブックマークを改名します。URL の変更とフォルダーの改名は行わず、削除するのは Trash へ送って確認した項目だけです。",
-    "ui.popup.open": "マネージャーを開く",
+    "ui.popup.open": "エージェント用画面を開く",
 
-    "section.quickstart.title": "はじめに",
+    "nav.title": "操作の移動先",
+    "nav.agent": "エージェント",
+    "nav.tree": "ライブツリー",
+    "nav.duplicates": "重複",
+    "nav.plan": "計画",
+    "nav.apply": "適用",
+    "nav.restore": "復元",
+    "nav.trash": "Trash",
+    "section.quickstart.title": "適用前のバックアップ",
     "section.quickstart.note":
-      "初めての方はこちら。1 の 2 つのボタンをまとめて実行し、ブックマークを読み込んでバックアップファイルを保存します。それ以外は実行せず、3 で移動を選び、4 でそのバックアップを選び直すまで、何も移動しません。",
-    "section.quickstart.run": "ツリーを読み込んでバックアップを保存",
+      "現在のスナップショットを保存し、4 で保存したファイルを選択してください。作成済みの計画と Dry Run は保持されます。保存だけでは何も適用しません。",
+    "section.quickstart.run": "バックアップを保存",
     "section.tree.title": "1. ライブツリー",
     "section.tree.load": "ツリーを読み込む",
     "section.tree.export": "スナップショットを書き出す",
@@ -582,14 +635,39 @@ export const MESSAGES = {
     "section.duplicates.send": "残りを 3 へ送る",
     "section.duplicates.hint":
       "グループごとに「残す 1 件」を選び、残りを 3 へ送ってまとめておくフォルダーへ移動します。この操作は移動だけで、ここでは削除しません。そのフォルダー（例: 「重複（要確認）」）はご自身でブラウザーのブックマークマネージャーから作り、ツリーを再読み込みしてから 3 の「移動先」で選んでください。",
-    "section.agent.title": "7. 計画JSONの受け渡し",
-    "section.agent.note":
-      "コンテキストとプロンプトをエージェントへ渡し、返ってきた計画JSONを読み込みます。ブラウザー操作環境のあるエージェントは、マネージャーのコマンドAPIも利用できます。",
+    "section.agent.title": "エージェントと整理",
+    "section.agent.note": "まず提案を確認。変更は承認後に。",
     "section.agent.export": "エージェント向けコンテキストを書き出す (JSON)",
     "section.agent.scope": "配置対象",
     "section.agent.scope.all": "プロファイル全体",
-    "section.agent.copyHint":
-      "下のテキストを選択してご自身でコピーしてください。この拡張機能はクリップボードを操作しません。",
+    "section.agent.copyHint": "エージェントへの指示文",
+    "section.agent.copy": "エージェントへの指示をコピー",
+    "section.agent.goal": "整理の目的",
+    "section.agent.goal.review": "配置を見直す",
+    "section.agent.goal.empty": "選択フォルダーを空にする",
+    "section.agent.connection": "接続情報（任意）",
+    "section.agent.profileLabel": "プロファイルの呼び名（利用者指定）",
+    "section.agent.cdpUrl": "ローカルCDP接続先（分かる場合）",
+    "section.agent.preview": "指示文を確認",
+    "section.agent.files": "ファイルで受け渡す（代替手段）",
+    "section.agent.filePrompt": "書き出したファイル用の指示文",
+    "agent.copy.done": "指示文をコピーしました。",
+    "agent.ready.loading": "ブックマークを読み込んでいます…",
+    "agent.ready.busy":
+      "操作を実行中です。エージェントへの受け渡しは一時停止しています。",
+    "agent.ready.failed":
+      "ツリーを再取得できませんでした。ライブツリーで再試行してください。",
+    "agent.ready.loaded":
+      "受け渡し可能です。ブラウザーへの接続確認はエージェント側で行います。",
+    "agent.scope.missing":
+      "選択したフォルダーが見つかりません。対象を選び直してください。プロファイル全体には変更していません。",
+    "agent.scope.unavailable": "見つからないフォルダー（再選択）",
+    "agent.copy.fallback":
+      "クリップボードを利用できません。下の選択済み指示文を手動でコピーしてください。",
+    "agent.connection.invalid":
+      "認証情報・パス・クエリ・フラグメントを含まないローカルHTTP接続先を入力してください。",
+    "agent.goal.scopeRequired":
+      "フォルダーを空にする場合は、対象フォルダーを選択してください。",
     "agent.stats":
       "ブックマーク {bookmarks} 件 / フォルダー {folders} 件 / 境界グループ {boundaries} 個",
     "agent.scope.summary":
@@ -1017,6 +1095,8 @@ export const MESSAGES = {
 
     "agent.error.unknownCommand": "その command はこの API にありません",
     "agent.error.inputNotObject": "{command} の引数はオブジェクトか省略です",
+    "agent.error.planDigest":
+      "承認した計画のダイジェストが不正、または現在の計画と一致しません。計画を再確認して承認し直してください。",
     "agent.error.unknownField": '{command} は "{field}" を受け付けません',
     "agent.error.query": "search には空でない query が必要です",
     "agent.error.cursor":

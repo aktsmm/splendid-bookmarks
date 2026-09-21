@@ -6,6 +6,7 @@ import {
   MODE,
   SCOPE_WARNING_KEY,
   deriveControlState,
+  agentReadiness,
   scopeWarningAction,
 } from "../extension/src/core/ui-state.js";
 
@@ -21,11 +22,15 @@ test("before any tree is loaded only Load tree is available", () => {
 
 test("a loaded tree unlocks everything that derives from it", () => {
   assert.deepEqual(enabled({ hasTree: true }), [
+    "agent-cdp-url",
+    "agent-goal",
+    "agent-profile-label",
     "agent-scope",
     "backup-file",
     "builder-destination",
     "builder-filter",
     "builder-source",
+    "copy-agent-prompt",
     "export-agent-context",
     "export-tree",
     "find-duplicates",
@@ -37,6 +42,31 @@ test("a loaded tree unlocks everything that derives from it", () => {
     "trash-parent",
     "trash-title",
   ]);
+});
+
+test("a missing handoff scope blocks copying and export but allows reselection", () => {
+  const controls = deriveControlState({
+    hasTree: true,
+    agentScopeMissing: true,
+  });
+  assert.equal(controls["copy-agent-prompt"], true);
+  assert.equal(controls["export-agent-context"], true);
+  assert.equal(controls["agent-scope"], false);
+  assert.equal(controls["load-tree"], false);
+});
+
+test("handoff readiness distinguishes loading, execution, failure and missing scope", () => {
+  const base = { hasTree: true, mode: MODE.IDLE };
+  for (const [overrides, key] of [
+    [{}, "agent.ready.loaded"],
+    [{ loading: true }, "agent.ready.loading"],
+    [{ hasTree: false }, "agent.ready.loading"],
+    [{ mode: MODE.APPLYING }, "agent.ready.busy"],
+    [{ loadFailed: true }, "agent.ready.failed"],
+    [{ scopeMissing: true }, "agent.scope.missing"],
+  ]) {
+    assert.equal(agentReadiness({ ...base, ...overrides }).key, key);
+  }
 });
 
 test("sending to Trash needs a selection and a designated folder", () => {

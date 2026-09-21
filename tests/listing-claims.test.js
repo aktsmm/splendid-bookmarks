@@ -214,7 +214,7 @@ test("store summaries agree with manifest locales, catalog and submission draft"
   assert.equal(summary, blocks[0]);
 });
 
-test("the product purpose and plan-file labels stay agent-first", () => {
+test("the product purpose and first-screen copy stay agent-first", () => {
   for (const file of ["README.md", "docs/design.md"]) {
     const source = readFileSync(join(root, file), "utf8").replace(
       /\r\n/g,
@@ -229,8 +229,34 @@ test("the product purpose and plan-file labels stay agent-first", () => {
       MESSAGES[locale]["section.agent.title"],
       /optional|任意/,
     );
-    assert.match(MESSAGES[locale]["section.agent.note"], /API/);
+    assert.match(MESSAGES[locale]["section.agent.note"], /approval|承認/);
+    assert.match(
+      MESSAGES[locale]["section.agent.copy"],
+      /Copy agent|エージェント/,
+    );
   }
+  const markup = readFileSync(
+    join(root, "extension", "ui", "options.html"),
+    "utf8",
+  );
+  assert.ok(
+    markup.indexOf('id="copy-agent-prompt"') <
+      markup.indexOf('id="quick-start"'),
+  );
+});
+
+test("submission copy tracks the package version and discloses explicit clipboard writes", () => {
+  const version = JSON.parse(readFileSync(join(root, "package.json"), "utf8")).version;
+  const listing = readFileSync(join(root, "docs", "cws-listing.md"), "utf8");
+  const draft = readFileSync(join(root, "docs", "cws-submit-draft.md"), "utf8");
+  assert.ok(listing.includes(`This copy targets release ${version}.`));
+  assert.ok(draft.includes(`Splendid Bookmarks ${version}`));
+  assert.ok(draft.includes(`splendid-bookmarks-v${version}.zip`));
+  const [, en, , ja] = listingBlocks();
+  assert.match(en, /clipboard only when clicked/);
+  assert.match(en, /never reads the clipboard/);
+  assert.match(ja, /ボタンを押したときだけ/);
+  assert.match(ja, /クリップボードは読み取りません/);
 });
 
 test("privacy copy covers browser-agent sharing and versioned startup reads", () => {

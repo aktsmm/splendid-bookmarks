@@ -152,6 +152,15 @@ const auditedBody = (name) =>
 // not a call, and a name inside a comment must not be able to satisfy a rule.
 const code = (file) => stripComments(stripLiterals(read(file)));
 
+function clipboardAuditedCode(file) {
+  const source = code(file);
+  if (relative(file) !== join("ui", "options.js")) return source;
+  return source.replace(
+    /async function copyAgentPrompt\(\) \{[\s\S]*?\n\}/,
+    (body) => body.replace("navigator.clipboard.writeText(value)", ""),
+  );
+}
+
 test("the extension source contains at least the expected entry points", () => {
   assert.ok(
     files.length >= 6,
@@ -161,10 +170,41 @@ test("the extension source contains at least the expected entry points", () => {
 
 for (const { label, pattern } of FORBIDDEN) {
   test(`no ${label} in the shipped build`, () => {
-    const offenders = files.filter((file) => pattern.test(code(file)));
+    const offenders = files.filter((file) =>
+      pattern.test(
+        label === "clipboard hijacking"
+          ? clipboardAuditedCode(file)
+          : code(file),
+      ),
+    );
     assert.deepEqual(offenders.map(relative), []);
   });
 }
+
+test("clipboard writes are limited to the explicit copy-button handler", () => {
+  const source = read(join(extensionDir, "ui", "options.js"));
+  const body = /async function copyAgentPrompt\(\) \{[\s\S]*?\n\}/.exec(
+    source,
+  )?.[0];
+  assert.ok(body);
+  assert.match(body, /requireControl\("copy-agent-prompt"\)/);
+  assert.match(body, /el\("agent-prompt"\)/);
+  assert.match(body, /await navigator\.clipboard\.writeText\(value\)/);
+  assert.equal([...source.matchAll(/\bcopyAgentPrompt\b/g)].length, 2);
+  assert.match(
+    source,
+    /el\("copy-agent-prompt"\)\.addEventListener\("click", copyAgentPrompt\)/,
+  );
+  assert.equal(
+    files.reduce(
+      (count, file) =>
+        count +
+        [...code(file).matchAll(/navigator\.clipboard\.writeText/g)].length,
+      0,
+    ),
+    1,
+  );
+});
 
 /**
  * The scans are the whole safety argument, so they are checked against a sample

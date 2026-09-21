@@ -2,6 +2,7 @@
 <html lang="en">
   <head>
     <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>Splendid Bookmarks</title>
     <link rel="stylesheet" href="styles.css" />
   </head>
@@ -17,17 +18,164 @@
           </select>
         </div>
       </div>
-      <p class="badge badge-safe" data-i18n="ui.badge.writeScope">
-        Moves, renames a bookmark on request, creates one Trash folder, deletes
-        only what you confirm
-      </p>
-      <p class="muted" data-i18n="ui.intro">Work through the steps in order.</p>
+      <details class="product-safety">
+        <summary data-i18n="ui.safetyDetails">Safety and backups</summary>
+        <p class="badge badge-safe" data-i18n="ui.badge.writeScope">
+          Moves, renames a bookmark on request, creates one Trash folder,
+          deletes only what you confirm
+        </p>
+        <p class="muted" data-i18n="ui.intro">
+          Work through the steps in order.
+        </p>
+      </details>
     </header>
 
+    <nav class="workflow-nav" aria-labelledby="workflow-title">
+      <span id="workflow-title" class="sr-only" data-i18n="nav.title"
+        >Workflow</span
+      >
+      <a href="#agent-workspace" data-i18n="nav.agent">Agent</a>
+      <a href="#tree-section" data-i18n="nav.tree">Live tree</a>
+      <a href="#duplicates-section" data-i18n="nav.duplicates">Duplicates</a>
+      <a href="#plan-section" data-i18n="nav.plan">Plan</a>
+      <a href="#apply-section" data-i18n="nav.apply">Apply</a>
+      <a href="#restore-section" data-i18n="nav.restore">Restore</a>
+      <a href="#trash-section" data-i18n="nav.trash">Trash</a>
+    </nav>
+
+    <section id="agent-workspace" aria-labelledby="agent-heading" tabindex="-1">
+      <div class="agent-toolbar">
+        <h2 id="agent-heading" data-i18n="section.agent.title">
+          Organize with an agent
+        </h2>
+        <button
+          id="copy-agent-prompt"
+          type="button"
+          class="primary"
+          disabled
+          data-i18n="section.agent.copy"
+        >
+          Copy agent instructions
+        </button>
+      </div>
+      <div
+        id="agent-readiness"
+        class="status"
+        role="status"
+        aria-live="polite"
+      ></div>
+      <div
+        id="agent-copy-status"
+        class="status"
+        role="status"
+        aria-live="polite"
+      ></div>
+      <p class="muted" data-i18n="section.agent.note">
+        Propose first. Apply only after approval.
+      </p>
+      <div class="agent-fields">
+        <label for="agent-scope"
+          ><span data-i18n="section.agent.scope">Scope</span>
+          <select
+            id="agent-scope"
+            aria-describedby="agent-input-status"
+            disabled
+          >
+            <option value="" data-i18n="section.agent.scope.all">
+              Everything in the profile
+            </option>
+          </select>
+        </label>
+        <label for="agent-goal"
+          ><span data-i18n="section.agent.goal">Goal</span>
+          <select
+            id="agent-goal"
+            aria-describedby="agent-input-status"
+            disabled
+          >
+            <option value="review" data-i18n="section.agent.goal.review">
+              Review placement
+            </option>
+            <option value="empty" data-i18n="section.agent.goal.empty">
+              Empty selected folder
+            </option>
+          </select>
+        </label>
+      </div>
+      <details>
+        <summary data-i18n="section.agent.connection">
+          Connection details (optional)
+        </summary>
+        <div class="agent-fields">
+          <label for="agent-profile-label"
+            ><span data-i18n="section.agent.profileLabel"
+              >Profile label (user supplied)</span
+            >
+            <input
+              id="agent-profile-label"
+              type="text"
+              maxlength="80"
+              autocomplete="off"
+              disabled
+            />
+          </label>
+          <label for="agent-cdp-url"
+            ><span data-i18n="section.agent.cdpUrl"
+              >Local CDP endpoint (if known)</span
+            >
+            <input
+              id="agent-cdp-url"
+              aria-describedby="agent-input-status"
+              type="url"
+              placeholder="http://127.0.0.1:9222"
+              autocomplete="off"
+              disabled
+            />
+          </label>
+        </div>
+      </details>
+      <div id="agent-input-status" class="status" role="status"></div>
+      <details id="agent-prompt-block">
+        <summary data-i18n="section.agent.preview">Instruction preview</summary>
+        <label
+          for="agent-prompt"
+          class="muted"
+          data-i18n="section.agent.copyHint"
+          >Agent instructions</label
+        >
+        <textarea id="agent-prompt" class="agent-output" readonly></textarea>
+        <div id="agent-summary"></div>
+      </details>
+      <details>
+        <summary data-i18n="section.agent.files">
+          File handoff (offline alternative)
+        </summary>
+        <div class="actions">
+          <button
+            id="export-agent-context"
+            type="button"
+            disabled
+            data-i18n="section.agent.export"
+          >
+            Export agent context (JSON)
+          </button>
+        </div>
+        <div id="agent-status" class="status" role="status"></div>
+        <label for="agent-file-prompt" data-i18n="section.agent.filePrompt"
+          >Instructions for the exported file</label
+        >
+        <textarea
+          id="agent-file-prompt"
+          class="agent-output"
+          readonly
+        ></textarea>
+      </details>
+    </section>
+
     <section>
-      <h2 data-i18n="section.quickstart.title">Start here</h2>
+      <h2 data-i18n="section.quickstart.title">Backup before applying</h2>
       <p class="muted" data-i18n="section.quickstart.note">
-        Load the tree and save a snapshot in one step.
+        Save the current snapshot, then select the saved file in step 4.
       </p>
       <div class="actions">
         <button
@@ -36,12 +184,12 @@
           class="primary"
           data-i18n="section.quickstart.run"
         >
-          Load the tree and save a backup
+          Save backup
         </button>
       </div>
     </section>
 
-    <section>
+    <section id="tree-section" tabindex="-1">
       <h2 data-i18n="section.tree.title">1. Live tree</h2>
       <div class="actions">
         <button
@@ -65,7 +213,7 @@
       <div id="tree-summary" class="panel"></div>
     </section>
 
-    <section>
+    <section id="duplicates-section" tabindex="-1">
       <h2 data-i18n="section.duplicates.title">2. Duplicate report</h2>
       <p class="muted" data-i18n="section.duplicates.hint">
         Pick the one copy to keep in each group, then send the rest to step 3.
@@ -106,7 +254,7 @@
       <div id="duplicates" class="panel"></div>
     </section>
 
-    <section>
+    <section id="plan-section" tabindex="-1">
       <h2 data-i18n="section.plan.title">3. Moves to apply</h2>
       <p class="muted" data-i18n="section.plan.note">
         Pick the moves yourself, or load a plan an agent produced. Either way
@@ -182,7 +330,7 @@
       <div id="dry-run-result" class="panel"></div>
     </section>
 
-    <section>
+    <section id="apply-section" tabindex="-1">
       <h2 data-i18n="section.apply.title">4. Apply</h2>
       <p class="muted" data-i18n="section.apply.note">
         Apply moves only the operations the Dry Run cleared, one at a time, and
@@ -230,7 +378,7 @@
       <div id="apply-result" class="panel"></div>
     </section>
 
-    <section>
+    <section id="restore-section" tabindex="-1">
       <h2 data-i18n="section.restore.title">5. Restore from a snapshot</h2>
       <p class="muted" data-i18n="section.restore.note">
         Works even after the extension has been reinstalled: the snapshot file
@@ -259,7 +407,7 @@
       <div id="restore-result" class="panel"></div>
     </section>
 
-    <section>
+    <section id="trash-section" tabindex="-1">
       <h2 data-i18n="section.trash.title">6. Trash</h2>
       <p class="muted" data-i18n="section.trash.note">
         Sending to Trash moves bookmarks into a folder you choose. Nothing is
@@ -350,45 +498,6 @@
       </div>
       <div id="trash-status" class="status" role="status" tabindex="-1"></div>
       <div id="trash-panel" class="panel"></div>
-    </section>
-
-    <section>
-      <h2 data-i18n="section.agent.title">7. Agent plan files</h2>
-      <p class="muted" data-i18n="section.agent.note">
-        Export the context and prompt for your agent, then import its plan JSON.
-        Agents with browser automation access can also use the manager's command
-        API.
-      </p>
-      <div class="actions">
-        <label for="agent-scope" data-i18n="section.agent.scope"
-          >Bookmarks to place</label
-        >
-        <select id="agent-scope" disabled>
-          <option value="" data-i18n="section.agent.scope.all">
-            Everything in the profile
-          </option>
-        </select>
-        <button
-          id="export-agent-context"
-          type="button"
-          disabled
-          data-i18n="section.agent.export"
-        >
-          Export agent context (JSON)
-        </button>
-      </div>
-      <div id="agent-status" class="status" role="status"></div>
-      <div id="agent-summary" class="panel"></div>
-      <div id="agent-prompt-block">
-        <label
-          for="agent-prompt"
-          class="muted"
-          data-i18n="section.agent.copyHint"
-        >
-          Select the text below and copy it yourself.
-        </label>
-        <textarea id="agent-prompt" class="agent-output" readonly></textarea>
-      </div>
     </section>
 
     <script type="module" src="options.js"></script>

@@ -122,7 +122,8 @@ try {
   );
   await evaluate("location.reload()");
   await waitFor(
-    `document.readyState === "complete" && !!document.getElementById("load-tree")`,
+    `document.readyState === "complete" && typeof window.splendidBookmarks?.run === "function" &&
+     document.getElementById("tree-status")?.dataset.kind === "ok" && !document.getElementById("load-tree").disabled`,
     "the options page after the language switch",
   );
   record("ui language", LANG);
@@ -165,18 +166,16 @@ try {
         return true; })()`,
     );
 
-  await evaluate(`document.getElementById("load-tree").click()`);
-  await waitFor(
-    `(document.getElementById("tree-status")?.textContent ?? "").length > 0`,
-    "the tree to load",
-  );
+  const stats = await evaluate(`window.splendidBookmarks.run("getStats")`);
+  if (!stats.ok || stats.state.bookmarks !== seeded) {
+    throw new Error("loaded screenshot tree does not match synthetic fixtures");
+  }
   await evaluate("window.scrollTo(0, 0)");
   await capture("01-live-tree.png");
 
   await evaluate(`document.getElementById("find-duplicates").click()`);
   await waitFor(
-    `document.querySelectorAll("#duplicates tr").length > 0 ||
-     (document.getElementById("duplicates-status")?.textContent ?? "").length > 0`,
+    `document.querySelectorAll('#duplicates input[type="radio"]').length > 0`,
     "the duplicate report",
   );
   await scrollToSection("#duplicates-status");
@@ -200,7 +199,10 @@ try {
   record("error", error.message);
   record("verdict", "CAPTURE FAIL");
 } finally {
-  if (cleanup) await cleanup();
+  if (cleanup && !(await cleanup())) {
+    failed = true;
+    record("cleanup", "FAIL: disposable profile was not removed");
+  }
 }
 
 process.exitCode = failed ? 1 : 0;

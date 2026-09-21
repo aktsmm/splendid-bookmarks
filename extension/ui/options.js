@@ -11,9 +11,14 @@ import {
 import { sha256Hex } from "../src/core/digest.js";
 import {
   buildAgentContext,
+  buildAgentTreeRows,
   subtreeBookmarkCounts,
 } from "../src/core/agent-export.js";
-import { buildAgentPrompt } from "../src/core/agent-prompt.js";
+import {
+  buildAgentPrompt,
+  buildConnectedAgentPrompt,
+  normalizeCdpUrl,
+} from "../src/core/agent-prompt.js";
 import {
   SKIP,
   findDuplicateGroups,
@@ -35,6 +40,7 @@ import {
   MODE,
   SCOPE_WARNING_KEY,
   deriveControlState,
+  agentReadiness,
   scopeWarningAction,
 } from "../src/core/ui-state.js";
 import { STATUS, dryRun } from "../src/core/validator.js";
@@ -49,6 +55,7 @@ import {
 import { verifyJournal } from "../src/core/reconciliation.js";
 import {
   capabilitiesState,
+  AGENT_API_VERSION,
   paginateEntries,
 } from "../src/core/agent-command.js";
 import { exposeAgentApi } from "./agent-api.js";
@@ -113,6 +120,7 @@ import {
 const state = {
   entries: null,
   treeDigest: null,
+  treeReadAt: null,
   browser: null,
   plan: null,
   planDigest: null,
@@ -120,6 +128,8 @@ const state = {
   planSource: null,
   // Scope the exported agent-context.json was built with, or undefined if never exported.
   exportedScope: undefined,
+  copySeq: 0,
+  treeLoadFailed: false,
   loading: false,
   // Bumped on every successful tree load so late async results can be discarded.
   generation: 0,
@@ -271,6 +281,7 @@ function applyControlState() {
   const disabledById = deriveControlState({
     loading: state.loading,
     hasTree: state.entries !== null,
+    agentScopeMissing: agentScopeMissing(),
     hasPlan: state.plan !== null,
     mode: state.mode,
     backupVerified: state.backupDigest !== null,
@@ -295,6 +306,14 @@ function applyControlState() {
   for (const [id, disabled] of Object.entries(disabledById)) {
     el(id).disabled = disabled;
   }
+  const readiness = agentReadiness({
+    loading: state.loading,
+    hasTree: state.entries !== null,
+    mode: state.mode,
+    scopeMissing: agentScopeMissing(),
+    loadFailed: state.treeLoadFailed,
+  });
+  setStatus("agent-readiness", readiness.key, undefined, readiness.kind);
 }
 
 function clearStatus(id) {
@@ -341,6 +360,8 @@ function resetDerivedViews() {
   el("restore-file").value = "";
 
   el("agent-prompt").value = "";
+  el("agent-file-prompt").value = "";
+  clearStatus("agent-copy-status");
   clearStatus("agent-status");
 
   // A hand-picked plan describes the tree that just went away, so it goes with
@@ -374,6 +395,7 @@ async function loadTree({ focus = true } = {}) {
   setStatus("tree-status", "tree.status.loading");
   try {
     const roots = await getLiveTree();
+    const treeReadAt = new Date().toISOString();
     const entries = flattenTree(roots);
     const browser = detectBrowser();
     const treeDigest = await sha256Hex(canonicalTreeString(entries));
@@ -383,6 +405,8 @@ async function loadTree({ focus = true } = {}) {
     state.entries = entries;
     state.browser = browser;
     state.treeDigest = treeDigest;
+    state.treeReadAt = treeReadAt;
+    state.treeLoadFailed = false;
     state.generation += 1;
     resetDerivedViews();
     populateScopeOptions();
@@ -400,6 +424,7 @@ async function loadTree({ focus = true } = {}) {
     );
     await restorePendingBatch();
   } catch (error) {
+    state.treeLoadFailed = true;
     setStatus(
       "tree-status",
       "tree.status.failed",
@@ -413,17 +438,17 @@ async function loadTree({ focus = true } = {}) {
   }
 }
 
-/**
- * The two steps everyone does back to back. It skips no gate: the snapshot
- * still has to be re-selected before Apply unlocks. The export only runs when
- * the load really produced a new tree, so a failed reload cannot write a
- * snapshot of the tree that is still on screen.
- */
 async function quickStart() {
-  if (state.loading) return;
-  const before = state.generation;
-  await loadTree();
-  if (state.generation === before) return;
+  requireControl("quick-start");
+  if (state.entries !== null && state.treeLoadFailed) {
+    focusResult("tree-status");
+    return;
+  }
+  if (state.entries === null) {
+    const before = state.generation;
+    await loadTree();
+    if (state.generation === before || state.treeLoadFailed) return;
+  }
   await exportTree();
 }
 
@@ -737,6 +762,15 @@ function sendDuplicates() {
   );
 }
 
+function agentScopeMissing() {
+  const scopeId = el("agent-scope").value;
+  return (
+    state.entries !== null &&
+    scopeId !== "" &&
+    !state.entries.some((entry) => entry.id === scopeId && entry.isFolder)
+  );
+}
+
 function agentContext() {
   return buildAgentContext(state.entries, {
     treeDigest: state.treeDigest,
@@ -763,9 +797,18 @@ function fillFolderSelect(id) {
     select.appendChild(optgroup);
   }
 
-  select.value = [...select.options].some((option) => option.value === previous)
-    ? previous
-    : "";
+  const exists = [...select.options].some(
+    (option) => option.value === previous,
+  );
+  if (!exists && previous && id === "agent-scope") {
+    const missing = document.createElement("option");
+    missing.value = previous;
+    missing.textContent = t("agent.scope.unavailable");
+    select.appendChild(missing);
+    select.value = previous;
+  } else {
+    select.value = exists ? previous : "";
+  }
 }
 
 function populateScopeOptions() {
@@ -778,6 +821,11 @@ function populateScopeOptions() {
 
 function renderAgentSummary() {
   state.views.agent = renderAgentSummary;
+  if (agentScopeMissing()) {
+    clear(el("agent-summary"));
+    renderAgentPrompt();
+    return;
+  }
   const context = agentContext();
   const panel = clear(el("agent-summary"));
   panel.appendChild(text("p", t("agent.stats", context.stats)));
@@ -815,7 +863,100 @@ function renderAgentSummary() {
       ),
     );
   }
-  el("agent-prompt").value = buildAgentPrompt(context, t.locale);
+  el("agent-file-prompt").value = buildAgentPrompt(context, t.locale);
+  renderAgentPrompt(context);
+}
+
+function renderAgentPrompt(context = null) {
+  state.copySeq += 1;
+  clearStatus("agent-input-status");
+  clearStatus("agent-copy-status");
+  const missing = agentScopeMissing();
+  el("agent-scope").setAttribute("aria-invalid", String(missing));
+  if (missing) {
+    el("agent-prompt").value = "";
+    el("agent-file-prompt").value = "";
+    setStatus("agent-input-status", "agent.scope.missing", undefined, "warn");
+    return;
+  }
+  context ??= agentContext();
+  const endpoint = el("agent-cdp-url");
+  const goal = el("agent-goal");
+  endpoint.setCustomValidity("");
+  endpoint.setAttribute("aria-invalid", "false");
+  goal.setCustomValidity(
+    goal.value === "empty" && !context.scope
+      ? t("agent.goal.scopeRequired")
+      : "",
+  );
+  goal.setAttribute("aria-invalid", String(!goal.validity.valid));
+  if (!goal.validity.valid) {
+    el("agent-prompt").value = "";
+    setStatus(
+      "agent-input-status",
+      "agent.goal.scopeRequired",
+      undefined,
+      "warn",
+    );
+    return;
+  }
+  try {
+    el("agent-prompt").value = buildConnectedAgentPrompt(
+      context,
+      {
+        managerUrl: chrome.runtime.getURL("ui/options.html"),
+        extensionId: chrome.runtime.id,
+        extensionVersion: chrome.runtime.getManifest().version,
+        apiVersion: AGENT_API_VERSION,
+        sessionId: agentSessionId,
+        snapshotId: agentSnapshotId(),
+        browser: state.browser,
+        treeReadAt: state.treeReadAt,
+        cdpUrl: normalizeCdpUrl(endpoint.value),
+        profileLabel: el("agent-profile-label").value,
+        goal: goal.value,
+      },
+      t.locale,
+    );
+  } catch {
+    el("agent-prompt").value = "";
+    endpoint.setCustomValidity(t("agent.connection.invalid"));
+    endpoint.setAttribute("aria-invalid", "true");
+    setStatus(
+      "agent-input-status",
+      "agent.connection.invalid",
+      undefined,
+      "warn",
+    );
+  }
+}
+
+async function copyAgentPrompt() {
+  requireControl("copy-agent-prompt");
+  renderAgentPrompt();
+  if (!el("agent-cdp-url").checkValidity()) {
+    el("agent-cdp-url").closest("details").open = true;
+    el("agent-cdp-url").reportValidity();
+    return;
+  }
+  if (!el("agent-goal").reportValidity()) return;
+  const prompt = el("agent-prompt");
+  const value = prompt.value;
+  const generation = state.generation;
+  const copySeq = state.copySeq;
+  try {
+    await navigator.clipboard.writeText(value);
+    if (copySeq !== state.copySeq) return;
+    if (generation !== state.generation || prompt.value !== value) return;
+    setStatus("agent-copy-status", "agent.copy.done", undefined, "ok");
+  } catch {
+    if (copySeq !== state.copySeq) return;
+    if (generation !== state.generation || prompt.value !== value) return;
+    el("agent-prompt-block").open = true;
+    prompt.focus();
+    prompt.select();
+    setStatus("agent-copy-status", "agent.copy.fallback", undefined, "warn");
+  }
 }
 
 /** Keeps the export status honest when the selected scope and the exported file diverge. */
@@ -1079,6 +1220,7 @@ function renderDryRun() {
     blocking.length === 0 ? "ok" : "warn",
   );
   applyControlState();
+  return result;
 }
 
 /**
@@ -1559,6 +1701,7 @@ async function verifyResult() {
       { ok, total: result.rows.length, count: result.rows.length - ok },
       result.ok ? "ok" : "error",
     );
+    return result;
   } catch (error) {
     if (generation !== state.generation) return;
     setStatus(
@@ -2259,6 +2402,14 @@ async function emptyTrashNow() {
 }
 
 el("load-tree").addEventListener("click", loadTree);
+for (const link of document.querySelectorAll(".workflow-nav a")) {
+  link.addEventListener("click", (event) => {
+    event.preventDefault();
+    const section = el(link.getAttribute("href").slice(1));
+    section.scrollIntoView({ block: "start" });
+    section.focus({ preventScroll: true });
+  });
+}
 el("quick-start").addEventListener("click", quickStart);
 el("export-tree").addEventListener("click", exportTree);
 el("backup-file").addEventListener("change", (event) => {
@@ -2296,9 +2447,16 @@ el("dup-mode").addEventListener("change", () => {
   applyControlState();
 });
 el("export-agent-context").addEventListener("click", exportAgentContext);
+el("copy-agent-prompt").addEventListener("click", copyAgentPrompt);
+for (const id of ["agent-goal", "agent-profile-label", "agent-cdp-url"]) {
+  el(id).addEventListener("input", () => {
+    if (state.entries !== null) renderAgentPrompt();
+  });
+}
 el("agent-scope").addEventListener("change", () => {
   if (state.views.agent) renderAgentSummary();
   syncScopeWarning();
+  applyControlState();
 });
 el("dry-run").addEventListener("click", renderDryRun);
 el("plan-file").addEventListener("change", (event) => {
@@ -2353,15 +2511,6 @@ const agentSessionId = globalThis.crypto.randomUUID();
 const agentSnapshotId = () =>
   state.entries === null ? null : `${agentSessionId}:${state.generation}`;
 
-const asRow = (entry) => ({
-  id: entry.id,
-  title: entry.title,
-  url: entry.url,
-  path: entry.path,
-  parentId: entry.parentId,
-  index: entry.index,
-});
-
 // Every handler either reads page state or calls the function a button calls.
 // Nothing here performs a bookmark write of its own.
 exposeAgentApi({
@@ -2376,6 +2525,19 @@ exposeAgentApi({
     treeDigest: state.treeDigest,
     treeStatus: statusOf("tree-status"),
   }),
+  refreshTree: async () => {
+    requireControl("load-tree");
+    const generation = state.generation;
+    await loadTree({ focus: false });
+    if (state.generation === generation || state.treeLoadFailed) {
+      throw new LocalizedError("agent.error.refreshFailed");
+    }
+    return {
+      sessionId: agentSessionId,
+      snapshotId: agentSnapshotId(),
+      treeDigest: state.treeDigest,
+    };
+  },
   getStats: () => {
     const entries = requireTree();
     return {
@@ -2395,6 +2557,7 @@ exposeAgentApi({
       ],
       mode: state.mode,
       hasPlan: state.plan !== null,
+      planDigest: state.planDigest,
       backupVerified: state.backupDigest !== null,
     };
   },
@@ -2406,7 +2569,7 @@ exposeAgentApi({
       limit,
       cursor,
     });
-    return { ...page, shown: page.shown.map(asRow) };
+    return { ...page, shown: buildAgentTreeRows(entries, page.shown) };
   },
   // Local filtering over the tree already in memory. `chrome.bookmarks.search`
   // is not used anywhere in this build.
@@ -2426,7 +2589,7 @@ exposeAgentApi({
       limit,
       cursor,
     });
-    return { ...page, shown: page.shown.map(asRow) };
+    return { ...page, shown: buildAgentTreeRows(entries, page.shown) };
   },
   listTrash: () => ({
     rejected: state.trashRejected !== null,
@@ -2441,6 +2604,7 @@ exposeAgentApi({
   }),
   loadPlan: async ({ plan }) => {
     requireControl("plan-file");
+    const seq = state.planSeq + 1;
     // Handed to the same reader the file input uses, so the size check, the
     // digest and the schema validation are the ones a file would have got.
     await loadPlan(
@@ -2448,28 +2612,58 @@ exposeAgentApi({
         type: "application/json",
       }),
     );
-    return { plan: statusOf("plan-status"), accepted: state.plan !== null };
+    if (seq !== state.planSeq) {
+      throw new LocalizedError("agent.error.superseded");
+    }
+    return {
+      plan: statusOf("plan-status"),
+      accepted: state.plan !== null,
+      planDigest: state.planDigest,
+    };
   },
   dryRun: () => {
     requireControl("dry-run");
-    renderDryRun();
+    const result = renderDryRun();
     return {
+      ...result,
       plan: statusOf("plan-status"),
+      planDigest: state.planDigest,
+      snapshotId: agentSnapshotId(),
+      treeDigest: state.treeDigest,
       approvable: state.dryRunRows !== null,
     };
   },
-  apply: async () => {
+  apply: async ({ planDigest }) => {
     // The backup has to be re-selected from disk, which is a file picker and
     // therefore a person. That is why this command cannot carry a batch from
     // plan to applied on its own.
     requireControl("apply-moves");
+    if (planDigest !== undefined && planDigest !== state.planDigest) {
+      throw new LocalizedError("agent.error.planDigest");
+    }
     await applyMoves();
-    return { apply: statusOf("apply-status"), mode: state.mode };
+    return {
+      apply: statusOf("apply-status"),
+      mode: state.mode,
+      planDigest: state.planDigest,
+      journalId: state.journal?.journalId ?? null,
+      journalPlanDigest: state.journal?.planDigest ?? null,
+      rows:
+        state.journal?.entries.map(({ opId, bookmarkId, state: outcome }) => ({
+          opId,
+          bookmarkId,
+          state: outcome,
+        })) ?? [],
+    };
   },
   verify: async () => {
     requireControl("verify-result");
-    await verifyResult();
-    return { apply: statusOf("apply-status"), mode: state.mode };
+    const result = await verifyResult();
+    return {
+      apply: statusOf("apply-status"),
+      mode: state.mode,
+      verification: result ?? null,
+    };
   },
   rollback: async () => {
     requireControl("rollback-batch");

@@ -77,16 +77,26 @@ class PilotAbort extends Error {}
  * profile into an account with nobody touching the window, and an account with
  * ten bookmarks in it is still somebody's account.
  */
+async function askOperator(question) {
+  const reader = createInterface({
+    input: process.stdin,
+    output: process.stdout,
+  });
+  try {
+    return await reader.question(question);
+  } finally {
+    reader.close();
+  }
+}
+
 async function askOperatorConsent() {
-  const rl = createInterface({ input: process.stdin, output: process.stdout });
-  const answer = await rl.question(
+  const answer = await askOperator(
     "\nPILOT_SIGNIN_PAUSE=1 drives a signed-in browser profile.\n" +
       "Browser single sign-on can sign a brand new profile into an account you already use.\n" +
       "This run then creates bookmarks in whatever account it ends up in, and deletes one of\n" +
       "its own fixtures for good. Use a throwaway account only.\n" +
       'Type "yes" to continue, anything else to stop: ',
   );
-  rl.close();
   return answer.trim().toLowerCase() === "yes";
 }
 
@@ -232,15 +242,10 @@ try {
     createdIds.push(localMarkerId);
     record("local marker before sign-in", `id=${localMarkerId}`);
 
-    const rl = createInterface({
-      input: process.stdin,
-      output: process.stdout,
-    });
-    await rl.question(
+    await askOperator(
       "\nSign the throwaway browser window in, decline sync when it is offered, decline any\n" +
         "offer to upload the existing bookmarks, then press Enter to continue...\n",
     );
-    rl.close();
     record("profile after the sign-in pause", `${await countNodes()} nodes`);
 
     // Sign-in, transport mode and the account roots all arrive asynchronously,
@@ -777,21 +782,39 @@ try {
       `kind=${await evaluate(`document.getElementById("apply-status").dataset.kind`)} — ${(await statusOf("apply-status")).text}`,
     );
 
-    await actAndWait(
-      "apply-moves",
-      "apply-status",
-      `["ok","warn","error"].includes(document.getElementById("apply-status").dataset.kind)`,
-      "the rename apply",
+    const wrongPlan = await evaluate(
+      `window.splendidBookmarks.run("apply", { planDigest: "0".repeat(64) })`,
+    );
+    assert.equal(wrongPlan.error?.key, "agent.error.planDigest");
+    const titleBeforeApply = await evaluate(
+      `chrome.bookmarks.get(${JSON.stringify(fixtures.keep)}).then(([node]) => node.title)`,
+    );
+    assert.equal(titleBeforeApply, renameTarget.title);
+    const appliedPlan = await evaluate(`(async () => {
+      const stats = await window.splendidBookmarks.run("getStats");
+      return window.splendidBookmarks.run("apply", { planDigest: stats.state.planDigest });
+    })()`);
+    assert.equal(appliedPlan.ok, true);
+    assert.equal(appliedPlan.state.mode, "applied");
+    assert.equal(appliedPlan.state.rows.length, 1);
+    assert.equal(appliedPlan.state.rows[0].state, "applied");
+    assert.equal(
+      appliedPlan.state.journalPlanDigest,
+      appliedPlan.state.planDigest,
     );
     const titleAfterApply = await evaluate(
       `chrome.bookmarks.get(${JSON.stringify(fixtures.keep)}).then(([n]) => JSON.stringify(n.title))`,
     ).then(JSON.parse);
 
-    await actAndWait(
-      "verify-result",
-      "apply-status",
-      `["ok","warn","error"].includes(document.getElementById("apply-status").dataset.kind)`,
-      "the rename verify",
+    const verifiedPlan = await evaluate(
+      `window.splendidBookmarks.run("verify")`,
+    );
+    assert.equal(verifiedPlan.ok, true);
+    assert.equal(verifiedPlan.state.verification.ok, true);
+    assert.equal(verifiedPlan.state.verification.rows.length, 1);
+    record(
+      "API plan binding",
+      "wrong digest refused without changes; matching plan applied; structured journal and verification matched",
     );
     const renameVerifyKind = await evaluate(
       `document.getElementById("apply-status").dataset.kind ?? ""`,

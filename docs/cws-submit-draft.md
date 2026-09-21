@@ -1,12 +1,12 @@
-# Chrome Web Store submission draft — Splendid Bookmarks 0.5.0
+# Chrome Web Store submission draft — Splendid Bookmarks 0.6.0
 
 Paste-ready values for the Developer Dashboard. Every claim here is checked against the
 build; `npm run check:store` fails if the repository drifts from it.
 
-Submission artifact: `builds/splendid-bookmarks-v0.5.0.zip` (42 runtime files,
-`manifest.json` at the archive root). Preserve the original 0.4.0 artifact.
+Submission artifact: `builds/splendid-bookmarks-v0.6.0.zip` (42 runtime files,
+`manifest.json` at the archive root). Preserve the original 0.4.0 and 0.5.0 artifacts.
 
-The revised listing copy below describes 0.5.0 capabilities. Verify its dashboard and
+The revised listing copy below describes 0.6.0 capabilities. Verify its dashboard and
 publication state after submission. The short summary comes from the manifest's localized
 description, so changing the source here does not update the live store. See the
 [manifest description reference](https://developer.chrome.com/docs/extensions/reference/manifest/description).

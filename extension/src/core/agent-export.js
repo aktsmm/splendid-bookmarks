@@ -7,6 +7,7 @@ import {
   boundaryKey,
   formatPath,
   indexById,
+  isBoundaryIndeterminate,
   isDescendantOf,
   topAncestorOf,
 } from "./tree-model.js";
@@ -15,6 +16,28 @@ import { PLAN_VERSION as SCHEMA_PLAN_VERSION } from "./plan-schema.js";
 export const AGENT_CONTEXT_VERSION = 1;
 /** Re-exported so the context, the builder and the validator cannot drift apart. */
 export const PLAN_SCHEMA_VERSION = SCHEMA_PLAN_VERSION;
+
+function entryBoundary(entry, byId) {
+  return isBoundaryIndeterminate(entry, byId)
+    ? null
+    : boundaryKey(topAncestorOf(entry, byId));
+}
+
+export function buildAgentTreeRows(entries, selectedEntries = entries) {
+  const byId = indexById(entries);
+  return selectedEntries.map((entry) => ({
+    id: entry.id,
+    title: entry.title,
+    url: entry.url,
+    path: entry.path,
+    parentId: entry.parentId,
+    index: entry.index,
+    isFolder: entry.isFolder,
+    isPermanentRoot: entry.isPermanentRoot,
+    unmodifiable: entry.unmodifiable ?? null,
+    boundary: entryBoundary(entry, byId),
+  }));
+}
 
 /** Folder paths shared by more than one folder; those need destinationFolderId. */
 export function findAmbiguousFolderPaths(entries) {
@@ -33,7 +56,7 @@ export function findAmbiguousFolderPaths(entries) {
 
 export function buildAgentContext(entries, options = {}) {
   const byId = indexById(entries);
-  const boundaryOf = (entry) => boundaryKey(topAncestorOf(entry, byId));
+  const boundaryOf = (entry) => entryBoundary(entry, byId);
   const childCounts = new Map();
   for (const entry of entries) {
     if (entry.parentId === null) continue;

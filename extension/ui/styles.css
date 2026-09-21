@@ -85,6 +85,7 @@ h4 {
 }
 
 section {
+  scroll-margin-top: 72px;
   margin-bottom: 28px;
   padding: 16px;
   border: 1px solid var(--border);
@@ -136,7 +137,9 @@ button.primary:not(:disabled) {
   color: var(--accent-fg);
 }
 
-button:disabled {
+button:disabled,
+select:disabled,
+input:disabled {
   opacity: 0.5;
   cursor: not-allowed;
 }
@@ -177,7 +180,7 @@ button:disabled {
   font-size: 0.9em;
 }
 
-:where(a, button, select, textarea, input):focus-visible {
+:where(a, button, select, textarea, input, summary, section):focus-visible {
   outline: 2px solid var(--accent);
   outline-offset: 2px;
 }
@@ -203,6 +206,122 @@ button:disabled {
   border: 1px solid var(--border);
   border-radius: 6px;
   resize: vertical;
+}
+
+#agent-workspace {
+  border: 0;
+  border-bottom: 1px solid var(--border);
+  border-radius: 0;
+  padding: 16px 0 24px;
+}
+
+.workflow-nav {
+  position: sticky;
+  top: 0;
+  z-index: 5;
+  display: flex;
+  gap: 4px;
+  max-width: 100%;
+  padding: 4px 0;
+  margin-bottom: 12px;
+  overflow-x: auto;
+  background: var(--bg);
+  border-bottom: 1px solid var(--border);
+}
+
+.product-safety {
+  margin: 8px 0;
+}
+
+.product-safety summary {
+  cursor: pointer;
+  color: var(--muted);
+}
+
+.workflow-nav a {
+  flex: none;
+  display: inline-flex;
+  align-items: center;
+  min-height: 44px;
+  padding: 8px 12px;
+  color: var(--accent);
+  text-underline-offset: 4px;
+}
+
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+[aria-invalid="true"] {
+  border-color: var(--error);
+}
+
+.agent-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+}
+
+.agent-toolbar h2 {
+  margin: 0;
+}
+
+.agent-fields {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+  margin: 12px 0;
+}
+
+.agent-fields label {
+  min-width: 0;
+}
+
+.agent-fields select,
+.agent-fields input {
+  display: block;
+  width: 100%;
+  min-width: 0;
+  margin-top: 4px;
+  font: inherit;
+  padding: 6px 12px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  color: var(--fg);
+  background: var(--bg);
+}
+
+#agent-workspace details {
+  padding: 8px 0;
+}
+#agent-workspace summary {
+  cursor: pointer;
+}
+
+@media (max-width: 600px) {
+  body:not(.popup) {
+    padding: 16px;
+  }
+  .agent-fields {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  #copy-agent-prompt {
+    width: 100%;
+    min-height: 44px;
+  }
+  button,
+  select,
+  input {
+    max-width: 100%;
+  }
 }
 
 .status[data-kind="ok"] {

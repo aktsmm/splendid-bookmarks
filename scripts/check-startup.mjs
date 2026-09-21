@@ -1,6 +1,12 @@
 import assert from "node:assert/strict";
 import { execFile } from "node:child_process";
-import { readFileSync, readdirSync } from "node:fs";
+import {
+  mkdirSync,
+  readFileSync,
+  readdirSync,
+  writeFileSync,
+  watch,
+} from "node:fs";
 import { join } from "node:path";
 import { promisify } from "node:util";
 import { MESSAGES } from "../extension/src/core/messages.js";
@@ -18,6 +24,7 @@ const session = await launchPilotBrowser({
   sync: false,
 });
 let passed = false;
+let cancelDownloadWait = () => {};
 try {
   const { page, evaluate, downloads } = session;
   const waitFor = makeWaiter(evaluate);
@@ -61,6 +68,177 @@ try {
   record(
     "agent-first copy",
     "English/Japanese plan-file headings and API notes rendered; packaged summary matches",
+  );
+
+  const captures = join(ROOT, "tmp", "agent-ux-captures");
+  mkdirSync(captures, { recursive: true });
+  for (const [locale, width, height, theme] of [
+    ["en", 1280, 800, "light"],
+    ["ja", 390, 844, "dark"],
+    ["en", 320, 568, "light"],
+    ["ja", 320, 568, "dark"],
+  ]) {
+    await page.send("Emulation.setEmulatedMedia", {
+      features: [{ name: "prefers-color-scheme", value: theme }],
+    });
+    await page.send("Emulation.setDeviceMetricsOverride", {
+      width,
+      height,
+      deviceScaleFactor: 1,
+      mobile: false,
+    });
+    const layout = await evaluate(`(() => {
+      const locale = document.getElementById("ui-locale");
+      locale.value = ${JSON.stringify(locale)};
+      locale.dispatchEvent(new Event("change", { bubbles: true }));
+      window.scrollTo(0, 0);
+      const button = document.getElementById("copy-agent-prompt");
+      const bounds = button.getBoundingClientRect();
+      return { top: bounds.top, bottom: bounds.bottom, height: innerHeight,
+        disabled: button.disabled,
+        overflow: document.documentElement.scrollWidth > innerWidth,
+        prompt: document.getElementById("agent-prompt").value,
+        firstSection: document.querySelector("section").id };
+    })()`);
+    assert.equal(layout.firstSection, "agent-workspace");
+    assert.equal(layout.disabled, false);
+    assert.equal(layout.overflow, false);
+    assert.ok(layout.top >= 0 && layout.bottom < layout.height);
+    assert.ok(layout.prompt.includes("sessionId"));
+    const shot = await page.send("Page.captureScreenshot", { format: "png" });
+    writeFileSync(
+      join(captures, `agent-${locale}-${width}.png`),
+      Buffer.from(shot.data, "base64"),
+    );
+  }
+  await page.send("Emulation.clearDeviceMetricsOverride");
+  await evaluate(
+    `document.querySelector('.workflow-nav a[href="#plan-section"]').focus()`,
+  );
+  await page.send("Input.dispatchKeyEvent", {
+    type: "keyDown",
+    key: "Enter",
+    code: "Enter",
+    windowsVirtualKeyCode: 13,
+  });
+  await page.send("Input.dispatchKeyEvent", {
+    type: "keyUp",
+    key: "Enter",
+    code: "Enter",
+    windowsVirtualKeyCode: 13,
+  });
+  const navigation = await evaluate(`(() => ({
+    active: document.activeElement.id, hash: location.hash,
+    visible: document.getElementById("plan-section").getBoundingClientRect().top >= document.querySelector(".workflow-nav").getBoundingClientRect().bottom,
+  }))()`);
+  assert.equal(navigation.active, "plan-section");
+  assert.equal(navigation.hash, "");
+  assert.equal(navigation.visible, true);
+  await page.send("Input.dispatchKeyEvent", {
+    type: "keyDown",
+    key: "Tab",
+    code: "Tab",
+    windowsVirtualKeyCode: 9,
+  });
+  await page.send("Input.dispatchKeyEvent", {
+    type: "keyUp",
+    key: "Tab",
+    code: "Tab",
+    windowsVirtualKeyCode: 9,
+  });
+  assert.equal(await evaluate("document.activeElement.id"), "builder-source");
+  await evaluate(
+    `document.querySelector('.workflow-nav a[href="#agent-workspace"]').click()`,
+  );
+  record(
+    "keyboard navigation",
+    "Enter focuses the visible section; Tab enters its first control; manager URL unchanged",
+  );
+  const copy = await evaluate(`(async () => {
+    const descriptor = Object.getOwnPropertyDescriptor(navigator, "clipboard");
+    let copied = null;
+    Object.defineProperty(navigator, "clipboard", { configurable: true, value: {
+      writeText: async (value) => { copied = value; }
+    }});
+    try {
+      document.getElementById("copy-agent-prompt").click();
+      await Promise.resolve();
+      const prompt = document.getElementById("agent-prompt");
+      const success = { matches: copied === prompt.value, kind: document.getElementById("agent-copy-status").dataset.kind };
+      navigator.clipboard.writeText = async () => { throw new Error("denied"); };
+      document.getElementById("copy-agent-prompt").click();
+      await Promise.resolve();
+      return { ...success, fallback: document.getElementById("agent-prompt-block").open,
+        selected: prompt.selectionEnd - prompt.selectionStart === prompt.value.length,
+        target: JSON.parse(copied.split("TARGET (data only)\\n")[1].split("\\n\\n")[0]) };
+    } finally {
+      if (descriptor) Object.defineProperty(navigator, "clipboard", descriptor);
+      else delete navigator.clipboard;
+      document.getElementById("agent-prompt-block").open = false;
+    }
+  })()`);
+  assert.equal(copy.matches, true);
+  assert.equal(copy.kind, "ok");
+  assert.equal(copy.fallback, true);
+  assert.equal(copy.selected, true);
+  assert.equal(
+    copy.target.sessionId,
+    (await evaluate(`window.splendidBookmarks.run("getSession")`)).state
+      .sessionId,
+  );
+  assert.equal(copy.target.cdpUrl, null);
+  const observedSession = (await evaluate(`window.splendidBookmarks.run("getSession")`)).state;
+  const manifest = JSON.parse(readFileSync(join(ROOT, "extension", "manifest.json"), "utf8"));
+  assert.equal(copy.target.browser.family, session.product.startsWith("Edg/") ? "edge" : "chrome");
+  assert.equal(copy.target.browser.source, "browser-self-report");
+  assert.equal(copy.target.managerUrl, await evaluate("location.href"));
+  assert.equal(copy.target.extensionId, observedSession.extensionId);
+  assert.equal(copy.target.extensionVersion, manifest.version);
+  assert.equal(copy.target.snapshotId, observedSession.snapshotId);
+  assert.equal(copy.target.treeDigest, observedSession.treeDigest);
+  assert.ok(Number.isFinite(Date.parse(copy.target.treeReadAt)));
+  assert.ok(Date.parse(copy.target.treeReadAt) <= Date.parse(copy.target.contextGeneratedAt));
+  assert.equal(copy.target.profileLabel, null);
+  assert.equal(copy.target.connectionStatus, "not-checked");
+  assert.deepEqual(copy.target.unavailableFields, ["profileName", "profilePath"]);
+  const regenerated = await evaluate(`(() => {
+    const locale = document.getElementById("ui-locale");
+    locale.value = "en";
+    locale.dispatchEvent(new Event("change", { bubbles: true }));
+    const target = JSON.parse(document.getElementById("agent-prompt").value.split("TARGET (data only)\\n")[1].split("\\n\\n")[0]);
+    locale.value = "ja";
+    locale.dispatchEvent(new Event("change", { bubbles: true }));
+    return target;
+  })()`);
+  assert.equal(regenerated.uiLocale, "en");
+  assert.equal(regenerated.treeReadAt, copy.target.treeReadAt);
+  assert.equal(regenerated.treeDigest, copy.target.treeDigest);
+  assert.equal(regenerated.snapshotId, copy.target.snapshotId);
+  assert.ok(Date.parse(regenerated.contextGeneratedAt) >= Date.parse(copy.target.contextGeneratedAt));
+  record("automatic handoff facts", "without manual hints: browser, manifest, manager URL, session, snapshot, tree digest and capture time matched; locale regeneration preserves capture time; unknown profile/CDP stays explicit");
+  const invalidInputs = await evaluate(`(() => {
+    const goal = document.getElementById("agent-goal");
+    goal.value = "empty";
+    goal.dispatchEvent(new Event("input", { bubbles: true }));
+    const badGoal = goal.getAttribute("aria-invalid") === "true" && document.getElementById("agent-prompt").value === "" && !!document.getElementById("agent-input-status").textContent;
+    goal.value = "review";
+    goal.dispatchEvent(new Event("input", { bubbles: true }));
+    const endpoint = document.getElementById("agent-cdp-url");
+    endpoint.value = "https://example.com";
+    endpoint.dispatchEvent(new Event("input", { bubbles: true }));
+    const badEndpoint = endpoint.getAttribute("aria-invalid") === "true" && document.getElementById("agent-prompt").value === "";
+    endpoint.value = "";
+    endpoint.dispatchEvent(new Event("input", { bubbles: true }));
+    return { badGoal, badEndpoint, recovered: !!document.getElementById("agent-prompt").value && document.getElementById("agent-input-status").textContent === "" };
+  })()`);
+  assert.deepEqual(invalidInputs, {
+    badGoal: true,
+    badEndpoint: true,
+    recovered: true,
+  });
+  record(
+    "agent copy UX",
+    "desktop/mobile first viewport; localized prompt; clipboard adapter success/failure; target session matched; captures in tmp/agent-ux-captures",
   );
 
   await evaluate(`(async () => {
@@ -114,6 +292,7 @@ try {
       stats: await window.splendidBookmarks.run("getStats"),
       apply: await window.splendidBookmarks.run("apply"),
       loadDisabled: document.getElementById("load-tree").disabled,
+      readiness: document.getElementById("agent-readiness").textContent,
     };
   })()`);
   assert.equal(loading.stats.error?.key, "agent.error.noTree");
@@ -122,6 +301,7 @@ try {
   assert.equal(loading.session.state.loading, true);
   assert.equal(loading.apply.error?.key, "agent.error.notReady");
   assert.equal(loading.loadDisabled, true);
+  assert.equal(loading.readiness, MESSAGES.ja["agent.ready.loading"]);
   await evaluate(`window.__startupProbe.release()`);
   await waitFor(ready, "automatic populated tree load");
   const loaded = await evaluate(`(async () => ({
@@ -143,6 +323,12 @@ try {
   assert.equal(loaded.active, "ui-locale");
   assert.equal(loaded.reads, 1);
   assert.deepEqual(loaded.writes, []);
+  assert.ok(
+    loaded.tree.state.shown.every(
+      (entry) =>
+        "boundary" in entry && "unmodifiable" in entry && "isFolder" in entry,
+    ),
+  );
   assert.equal(readdirSync(downloads).length, 0);
   assert.equal(
     await evaluate(`chrome.bookmarks.getTree().then(JSON.stringify)`),
@@ -151,6 +337,79 @@ try {
   record(
     "populated startup",
     "627 bookmarks; one automatic read; focus retained; no writes/downloads; Apply locked",
+  );
+  const refreshFailure = await evaluate(`(async () => {
+    const before = await window.splendidBookmarks.run("getSession");
+    const scope = document.getElementById("agent-scope");
+    const replace = scope.replaceChildren;
+    let failed;
+    try {
+      scope.replaceChildren = () => { throw new Error("Injected render failure after tree commit"); };
+      failed = await window.splendidBookmarks.run("refreshTree");
+    } finally {
+      scope.replaceChildren = replace;
+    }
+    const after = await window.splendidBookmarks.run("getSession");
+    const recovered = await window.splendidBookmarks.run("refreshTree");
+    return { before, failed, after, recovered };
+  })()`);
+  assert.equal(refreshFailure.failed.ok, false);
+  assert.equal(refreshFailure.failed.error.key, "agent.error.refreshFailed");
+  assert.notEqual(
+    refreshFailure.after.state.snapshotId,
+    refreshFailure.before.state.snapshotId,
+  );
+  assert.equal(refreshFailure.after.state.treeStatus.kind, "error");
+  assert.equal(refreshFailure.recovered.ok, true);
+  record(
+    "refresh failure contract",
+    "failure after generation commit is rejected; next explicit refresh recovers",
+  );
+
+  const planRace = await evaluate(`(async () => {
+    const originalRead = FileReader.prototype.readAsText;
+    let release;
+    let finishUi;
+    const uiDone = new Promise((resolve) => { finishUi = resolve; });
+    FileReader.prototype.readAsText = function(file) {
+      if (file.name === "agent-plan.json") {
+        release = () => originalRead.call(this, file);
+      } else {
+        this.addEventListener("loadend", () => finishUi(), { once: true });
+        originalRead.call(this, file);
+      }
+    };
+    try {
+      const pending = window.splendidBookmarks.run("loadPlan", { plan: { version: 2, notes: "API request", operations: [] } });
+      if (!release) throw new Error("API file read did not start");
+      const transfer = new DataTransfer();
+      transfer.items.add(new File([JSON.stringify({ version: 2, notes: "UI replacement", operations: [] })], "ui-plan.json", { type: "application/json" }));
+      const input = document.getElementById("plan-file");
+      input.files = transfer.files;
+      input.dispatchEvent(new Event("change", { bubbles: true }));
+      await uiDone;
+      release();
+      return await pending;
+    } finally {
+      FileReader.prototype.readAsText = originalRead;
+    }
+  })()`);
+  assert.equal(planRace.ok, false);
+  assert.equal(planRace.error.key, "agent.error.superseded");
+  await waitFor(
+    `document.getElementById("plan-status").dataset.kind === "ok"`,
+    "UI replacement plan accepted",
+  );
+  await evaluate(`window.splendidBookmarks.run("dryRun")`);
+  assert.ok(
+    await evaluate(
+      `document.getElementById("dry-run-result").textContent.includes("UI replacement")`,
+    ),
+  );
+  assert.deepEqual(await evaluate("window.__startupProbe.writes"), []);
+  record(
+    "plan load race",
+    "UI replacement retained; superseded API request rejected; no bookmark writes",
   );
   const search = await evaluate(`(async () => {
     let cursor;
@@ -169,7 +428,8 @@ try {
   assert.equal(search.unique, 627);
   const originalCursor = loaded.tree.state.nextCursor;
   assert.ok(originalCursor);
-  await evaluate(`document.getElementById("load-tree").click()`);
+  const refresh = await evaluate(`window.splendidBookmarks.run("refreshTree")`);
+  assert.equal(refresh.ok, true);
   await waitFor(ready, "manual refresh before stale cursor check");
   const stale = await evaluate(
     `window.splendidBookmarks.run("getTree", { cursor: ${JSON.stringify(originalCursor)} })`,
@@ -178,6 +438,32 @@ try {
   record(
     "pagination",
     "all search results retrieved; old cursor rejected after tree refresh",
+  );
+
+  const proposal = await evaluate(`(async () => {
+    const tree = (await window.splendidBookmarks.run("getTree")).state.shown;
+    const bookmark = tree.find((entry) => !entry.isFolder);
+    const folder = tree.find((entry) => entry.isPermanentRoot && entry.boundary === bookmark.boundary && !entry.unmodifiable);
+    const plan = { version: 2, operations: [{ opId: "proposal-1", type: "move", bookmarkId: bookmark.id,
+      expectedTitle: bookmark.title, expectedUrl: bookmark.url, currentPath: bookmark.path,
+      destinationPath: folder.path, destinationFolderId: folder.id, reason: "Test proposal", confidence: 1 }] };
+    const loaded = await window.splendidBookmarks.run("loadPlan", { plan });
+    const checked = await window.splendidBookmarks.run("dryRun");
+    const denied = await window.splendidBookmarks.run("apply", { planDigest: loaded.state.planDigest });
+    return { loaded, checked, denied, writes: window.__startupProbe.writes };
+  })()`);
+  assert.equal(proposal.loaded.state.accepted, true);
+  assert.equal(proposal.checked.state.approvable, true);
+  assert.equal(proposal.checked.state.rows[0].status, "movable");
+  assert.equal(
+    proposal.checked.state.planDigest,
+    proposal.loaded.state.planDigest,
+  );
+  assert.equal(proposal.denied.error?.key, "agent.error.notReady");
+  assert.deepEqual(proposal.writes, []);
+  record(
+    "API proposal",
+    "metadata-only move plan accepted; detailed Dry Run; Apply blocked without backup; zero bookmark writes",
   );
 
   const execute = promisify(execFile);
@@ -246,6 +532,10 @@ try {
   );
   const failed = await evaluate(`window.splendidBookmarks.run("getStats")`);
   assert.equal(failed.error?.key, "agent.error.noTree");
+  assert.equal(
+    await evaluate(`document.getElementById("agent-readiness").dataset.kind`),
+    "error",
+  );
   assert.equal(await evaluate(`window.__startupProbe.reads`), 1);
   await evaluate(`document.getElementById("load-tree").click()`);
   await waitFor(ready, "manual retry after startup failure");
@@ -278,8 +568,117 @@ try {
     "connection guard",
     "CLI refuses a session id from before the page reload",
   );
+
+  const scopeRecovery = await evaluate(`(async () => {
+    const tree = (await window.splendidBookmarks.run("getTree")).state.shown;
+    const folder = tree.find((entry) => entry.isFolder && !entry.isPermanentRoot && entry.parentId !== null);
+    const scope = document.getElementById("agent-scope");
+    scope.value = folder.id;
+    scope.dispatchEvent(new Event("change", { bubbles: true }));
+    const originalRead = chrome.bookmarks.getTree;
+    try {
+      chrome.bookmarks.getTree = async () => {
+        const roots = await originalRead();
+        const prune = (node) => { if (node.children) { node.children = node.children.filter((child) => child.id !== folder.id); node.children.forEach(prune); } };
+        roots.forEach(prune);
+        return roots;
+      };
+      const refreshed = await window.splendidBookmarks.run("refreshTree");
+      if (!refreshed.ok) throw new Error(refreshed.error.key);
+      const missing = { id: scope.value, copyDisabled: document.getElementById("copy-agent-prompt").disabled,
+        exportDisabled: document.getElementById("export-agent-context").disabled,
+        preview: document.getElementById("agent-prompt").value,
+        status: document.getElementById("agent-readiness").textContent };
+      scope.value = "";
+      scope.dispatchEvent(new Event("change", { bubbles: true }));
+      return { missing, expectedId: folder.id, recovered: !document.getElementById("copy-agent-prompt").disabled };
+    } finally {
+      chrome.bookmarks.getTree = originalRead;
+      await window.splendidBookmarks.run("refreshTree");
+    }
+  })()`);
+  assert.equal(scopeRecovery.missing.id, scopeRecovery.expectedId);
+  assert.equal(scopeRecovery.missing.copyDisabled, true);
+  assert.equal(scopeRecovery.missing.exportDisabled, true);
+  assert.equal(scopeRecovery.missing.preview, "");
+  assert.equal(
+    scopeRecovery.missing.status,
+    MESSAGES.ja["agent.scope.missing"],
+  );
+  assert.equal(scopeRecovery.recovered, true);
+  assert.deepEqual(await evaluate("window.__startupProbe.writes"), []);
+  assert.equal(
+    await evaluate(`chrome.bookmarks.getTree().then(JSON.stringify)`),
+    baseline,
+  );
+  record(
+    "missing scope recovery",
+    "virtual missing folder remains selected; handoff blocked; explicit reselection recovers; live bookmarks unchanged",
+  );
+
+  await evaluate(
+    `window.splendidBookmarks.run("loadPlan", { plan: { version: 2, operations: [] } })`,
+  );
+  await evaluate(`window.splendidBookmarks.run("dryRun")`);
+  const beforeBackup = await evaluate(
+    `window.splendidBookmarks.run("getStats")`,
+  );
+  const downloadReady = new Promise((resolve, reject) => {
+    let watcher;
+    let deadline;
+    let settled = false;
+    const finish = (error, filename) => {
+      if (settled) return;
+      settled = true;
+      clearTimeout(deadline);
+      watcher?.close();
+      if (error) reject(error);
+      else resolve(filename);
+    };
+    cancelDownloadWait = () =>
+      finish(new Error("backup download wait cancelled"));
+    watcher = watch(downloads, () => {
+      let filename;
+      try {
+        filename = readdirSync(downloads).find((name) =>
+          name.endsWith(".json"),
+        );
+        if (!filename) return;
+        JSON.parse(readFileSync(join(downloads, filename), "utf8"));
+      } catch (error) {
+        if (!(error instanceof SyntaxError)) finish(error);
+        return;
+      }
+      finish(null, filename);
+    });
+    watcher.on("error", (error) => finish(error));
+    deadline = setTimeout(() => {
+      finish(new Error("backup download did not reach disk"));
+    }, 10000);
+  });
+  void downloadReady.catch(() => {});
+  await evaluate(`document.getElementById("quick-start").click()`);
+  await waitFor(
+    `document.getElementById("tree-status").dataset.kind === "ok" && document.getElementById("tree-status").textContent.includes("sha256")`,
+    "backup saved without reloading",
+  );
+  const afterBackup = await evaluate(
+    `window.splendidBookmarks.run("getStats")`,
+  );
+  assert.equal(afterBackup.state.snapshotId, beforeBackup.state.snapshotId);
+  assert.equal(afterBackup.state.planDigest, beforeBackup.state.planDigest);
+  assert.equal(afterBackup.state.hasPlan, true);
+  assert.equal(afterBackup.state.backupVerified, false);
+  await downloadReady;
+  assert.equal(readdirSync(downloads).length, 1);
+  assert.deepEqual(await evaluate("window.__startupProbe.writes"), []);
+  record(
+    "backup UX",
+    "saved snapshot without invalidating plan/tree; backup verification still required; no writes",
+  );
   passed = true;
 } finally {
+  cancelDownloadWait();
   assert.equal(
     await session.cleanup(),
     true,

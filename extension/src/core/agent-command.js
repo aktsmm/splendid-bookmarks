@@ -11,7 +11,11 @@
  * this page and click every control. The API exists so an agent has a stable
  * surface instead of scraping the DOM, not to decide who may act.
  */
-import { MAX_PLAN_OPERATIONS, MAX_RENDERED_ROWS } from "./limits.js";
+import {
+  MAX_BATCH_OPERATIONS,
+  MAX_PLAN_OPERATIONS,
+  MAX_RENDERED_ROWS,
+} from "./limits.js";
 import { LocalizedError } from "./errors.js";
 
 export const AGENT_API_VERSION = 1;
@@ -34,6 +38,7 @@ export const AGENT_API_VERSION = 1;
 export const COMMAND_NAMES = [
   "capabilities",
   "getSession",
+  "refreshTree",
   "getStats",
   "getTree",
   "search",
@@ -49,13 +54,14 @@ export const COMMAND_NAMES = [
 const COMMAND_INPUTS = new Map([
   ["capabilities", []],
   ["getSession", []],
+  ["refreshTree", []],
   ["getStats", []],
   ["getTree", ["limit", "cursor"]],
   ["search", ["query", "limit", "cursor"]],
   ["listTrash", []],
   ["loadPlan", ["plan"]],
   ["dryRun", []],
-  ["apply", []],
+  ["apply", ["planDigest"]],
   ["verify", []],
   ["rollback", []],
 ]);
@@ -100,6 +106,14 @@ export function validateInvocation(command, input) {
     }
   }
 
+  if (
+    command === "apply" &&
+    given.planDigest !== undefined &&
+    (typeof given.planDigest !== "string" ||
+      !/^[a-f0-9]{64}$/.test(given.planDigest))
+  ) {
+    return { ok: false, key: "agent.error.planDigest" };
+  }
   if (command === "search") {
     if (typeof given.query !== "string" || given.query.length === 0) {
       return { ok: false, key: "agent.error.query" };
@@ -205,12 +219,17 @@ export function capabilitiesState() {
     commands: [...COMMAND_NAMES],
     limits: {
       maxPlanOperations: MAX_PLAN_OPERATIONS,
+      maxBatchOperations: MAX_BATCH_OPERATIONS,
       maxRows: MAX_RENDERED_ROWS,
     },
     features: {
       pagination: true,
       sessionInfo: true,
       automaticTreeLoad: true,
+      treeMetadata: true,
+      structuredResults: true,
+      refreshTree: true,
+      planBinding: true,
     },
     // Stated in the descriptor because an agent that discovers the API will not
     // have read the docs.

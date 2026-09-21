@@ -1,6 +1,6 @@
 # Privacy Policy — Splendid Bookmarks
 
-Last updated: 2026-09-07
+Last updated: 2026-09-22
 
 ## English
 
@@ -39,6 +39,15 @@ access may be processed by the agent's provider under that tool's settings and p
 policy. The extension does not control that external processing.
 
 ### What is stored on your device
+
+In version 0.6.0, **Copy agent instructions** writes the generated
+instructions to your clipboard only when clicked. It never reads the clipboard. The
+instructions include the browser-reported family, manager URL, extension/API versions,
+session identifiers, tree capture time and digest, context generation time, UI language,
+scope and counts, and any
+profile label or local CDP endpoint you enter. Connection inputs remain in page memory
+only; the extension does not probe the endpoint, discover an account or persist them.
+Your operating system's clipboard history or sync settings may retain copied text.
 
 Three things, all local and all small:
 
@@ -126,6 +135,13 @@ once the extension is published there.
 拡張機能は外部ツールでの処理を管理しません。
 
 ### 端末に保存するもの
+
+0.6.0では、**エージェントへの指示をコピー** を押したときだけ生成した指示文を
+クリップボードへ書き込みます。クリップボードは読み取りません。指示文には管理画面URL、
+ブラウザー自己申告の種別、拡張/API版、セッション識別子、ツリー取得時刻・ダイジェスト、
+指示用データ生成時刻・表示言語、対象範囲と件数、および入力したプロファイルの呼び名・ローカルCDP接続先が
+含まれます。接続入力はページ内だけに保持し、接続確認・アカウント検出・永続保存は行いません。
+OSのクリップボード履歴や同期設定によってはコピー内容が保持されます。
 
 いずれも端末内に留まる 3 つだけです。
 

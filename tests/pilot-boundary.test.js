@@ -1,5 +1,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
+import { readFileSync } from "node:fs";
+import { runInNewContext } from "node:vm";
 
 import {
   OUTCOME,
@@ -13,6 +15,36 @@ import {
   planFixtureRoots,
   runOutcome,
 } from "../scripts/lib/pilot-boundary.mjs";
+
+test("every operator prompt closes its reader even when input fails", async () => {
+  const script = readFileSync(
+    new URL("../scripts/run-pilot.mjs", import.meta.url),
+    "utf8",
+  ).replace(/\r\n/g, "\n");
+  const body = /async function askOperator\(question\) \{[\s\S]*?\n\}/.exec(
+    script,
+  )?.[0];
+  assert.ok(body);
+  assert.equal([...script.matchAll(/createInterface\(/g)].length, 1);
+  for (const fails of [false, true]) {
+    let closed = 0;
+    const ask = runInNewContext(`(${body})`, {
+      process: { stdin: {}, stdout: {} },
+      createInterface: () => ({
+        question: async () => {
+          if (fails) throw new Error("stdin closed");
+          return "yes";
+        },
+        close: () => {
+          closed += 1;
+        },
+      }),
+    });
+    if (fails) await assert.rejects(ask("Continue?"), /stdin closed/);
+    else assert.equal(await ask("Continue?"), "yes");
+    assert.equal(closed, 1);
+  }
+});
 
 const root = (id, folderType, syncing, extra = {}) => ({
   id,

@@ -70,6 +70,98 @@ function harness({ entries = null, getLiveTree = async () => [] } = {}) {
   };
 }
 
+test("download monitoring closes on completion, cancellation, errors and timeout", async () => {
+  const script = readFileSync(
+    new URL("../scripts/check-startup.mjs", import.meta.url),
+    "utf8",
+  ).replace(/\r\n/g, "\n");
+  const block =
+    /const downloadReady = new Promise\(\(resolve, reject\) => \{[\s\S]*?\n  \}\);/.exec(
+      script,
+    )?.[0];
+  assert.ok(block);
+  assert.match(script, /finally \{\s+cancelDownloadWait\(\)/);
+  for (const scenario of [
+    "complete",
+    "cancel",
+    "watch-error",
+    "timeout",
+    "directory-error",
+    "partial-json",
+  ]) {
+    let changed;
+    let watchError;
+    let timeout;
+    let closed = 0;
+    let cleared = 0;
+    let payload = scenario === "partial-json" ? "{" : "{}";
+    const context = createContext({
+      downloads: "test-downloads",
+      cancelDownloadWait: null,
+      watch: (_path, listener) => {
+        changed = listener;
+        return {
+          close: () => {
+            closed += 1;
+          },
+          on: (_event, listener) => {
+            watchError = listener;
+          },
+        };
+      },
+      setTimeout: (callback) => {
+        timeout = callback;
+        return 1;
+      },
+      clearTimeout: () => {
+        cleared += 1;
+      },
+      readdirSync: () => {
+        if (scenario === "directory-error") throw new Error("ENOENT");
+        return ["backup.json"];
+      },
+      readFileSync: () => payload,
+      join: (...parts) => parts.join("/"),
+    });
+    const promise = runInContext(`${block}\ndownloadReady`, context);
+    if (scenario === "cancel") context.cancelDownloadWait();
+    else if (scenario === "watch-error") watchError(new Error("watch failed"));
+    else if (scenario === "timeout") timeout();
+    else changed();
+    if (scenario === "partial-json") {
+      assert.equal(closed, 0);
+      payload = "{}";
+      changed();
+    }
+    if (["complete", "partial-json"].includes(scenario))
+      assert.equal(await promise, "backup.json");
+    else await assert.rejects(promise);
+    assert.equal(closed, 1, scenario);
+    assert.equal(cleared, 1, scenario);
+    context.cancelDownloadWait();
+    assert.equal(closed, 1, scenario);
+  }
+});
+
+test("tree capture time remains bound to the snapshot after a failed refresh", async () => {
+  let failRead = false;
+  const page = harness({
+    getLiveTree: async () => {
+      if (failRead) throw new Error("offline");
+      return [];
+    },
+  });
+  await page.start();
+  const capturedAt = page.state.treeReadAt;
+  assert.ok(Number.isFinite(Date.parse(capturedAt)));
+  assert.equal(page.state.treeDigest, "test-digest");
+  failRead = true;
+  await page.loadTree({ focus: false });
+  assert.equal(page.state.treeLoadFailed, true);
+  assert.equal(page.state.treeReadAt, capturedAt);
+  assert.equal(page.state.generation, 1);
+});
+
 test("startup loads the tree after exposing the API without downloading or taking focus", async () => {
   assert.ok(startup.index > source.indexOf("exposeAgentApi({"));
   const page = harness();
