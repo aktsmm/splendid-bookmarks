@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import test from "node:test";
 
 import {
+  buildPlanFromProposal,
   buildPlanFromSelection,
   pruneCoveredSelection,
   selectableEntries,
@@ -15,6 +16,138 @@ import { sampleTree } from "./fixtures/sample-tree.js";
 const entries = flattenTree(sampleTree());
 const byId = indexById(entries);
 const idsOf = (list) => list.map((entry) => entry.id);
+
+const proposal = (overrides = {}) => ({
+  snapshotId: "session:1",
+  scopeFolderId: null,
+  moves: [
+    {
+      bookmarkId: "200",
+      destinationFolderId: "10",
+      reason: "developer resource",
+    },
+  ],
+  ...overrides,
+});
+const prepare = (input, overrides = {}) =>
+  buildPlanFromProposal(input, {
+    entries,
+    snapshotId: "session:1",
+    scopeFolderId: null,
+    generatedAt: "2026-09-22T00:00:00.000Z",
+    ...overrides,
+  });
+
+test("compact proposals resolve identities and pass the existing schema and dry run", () => {
+  const result = prepare(proposal());
+  assert.equal(result.accepted, true);
+  assert.equal(validatePlanDocument(result.plan).ok, true);
+  assert.equal(result.movableCount, 1);
+  assert.equal(result.plan.operations[0].expectedTitle, byId.get("200").title);
+  assert.equal(result.plan.operations[0].opId, "agent-0001");
+});
+
+test("proposals reject stale snapshots, other sessions and changed or missing scopes", () => {
+  for (const snapshotId of ["session:0", "other:1"]) {
+    assert.throws(() => prepare(proposal({ snapshotId })), {
+      key: "agent.error.staleProposal",
+    });
+  }
+  for (const scopeFolderId of ["1", "gone", "200"]) {
+    assert.throws(
+      () => prepare(proposal({ scopeFolderId }), { scopeFolderId }),
+      { key: "agent.error.proposalScope" },
+    );
+  }
+  assert.throws(() => prepare(proposal(), { scopeFolderId: "2" }), {
+    key: "agent.error.proposalScope",
+  });
+  assert.equal(
+    prepare(proposal({ scopeFolderId: "2" }), { scopeFolderId: "2" }).accepted,
+    true,
+  );
+});
+
+test("proposals reject missing identities and unusable destinations without skipping", () => {
+  for (const bookmarkId of ["gone", "0", "1"]) {
+    assert.throws(
+      () =>
+        prepare(proposal({ moves: [{ ...proposal().moves[0], bookmarkId }] })),
+      { key: "agent.error.proposalSource" },
+    );
+  }
+  for (const destinationFolderId of ["gone", "0", "100"]) {
+    assert.throws(
+      () =>
+        prepare(
+          proposal({
+            moves: [{ ...proposal().moves[0], destinationFolderId }],
+          }),
+        ),
+      { key: "agent.error.proposalDestination" },
+    );
+  }
+});
+
+test("proposals retain duplicate and covered selections for whole-plan rejection", () => {
+  for (const bookmarkIds of [
+    ["200", "200"],
+    ["10", "100"],
+  ]) {
+    const result = prepare(
+      proposal({
+        moves: bookmarkIds.map((bookmarkId) => ({
+          bookmarkId,
+          destinationFolderId: "11",
+          reason: "group",
+        })),
+      }),
+    );
+    assert.equal(result.accepted, false);
+    assert.equal(result.plan, null);
+    assert.equal(result.rows.length, 2);
+    assert.ok(result.blockedCount > 0);
+  }
+});
+
+test("proposals reject cross-boundary, protected, cyclic and no-op moves", () => {
+  for (const [bookmarkId, destinationFolderId] of [
+    ["200", "300"],
+    ["400", "300"],
+    ["10", "101"],
+    ["100", "10"],
+    ["200", "4"],
+  ]) {
+    const result = prepare(
+      proposal({
+        moves: [{ bookmarkId, destinationFolderId, reason: "group" }],
+      }),
+    );
+    assert.equal(result.accepted, false);
+    assert.equal(result.plan, null);
+  }
+});
+
+test("unknown synchronization boundaries never match each other", () => {
+  const unknown = entries.map((entry) => ({ ...entry, syncing: null }));
+  assert.throws(() => prepare(proposal(), { entries: unknown }), {
+    key: "agent.error.proposalBoundary",
+  });
+});
+
+test("scope limits sources, while destinations can be outside it in the same boundary", () => {
+  const result = prepare(
+    proposal({
+      scopeFolderId: "10",
+      moves: [
+        { bookmarkId: "100", destinationFolderId: "11", reason: "group" },
+      ],
+    }),
+    { scopeFolderId: "10" },
+  );
+  assert.equal(result.accepted, true);
+  assert.equal(result.plan.operations[0].destinationFolderId, "11");
+});
 
 const build = (selectedIds, destinationFolderId) =>
   buildPlanFromSelection({

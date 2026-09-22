@@ -1,11 +1,11 @@
 {
   "extensionName": {
-    "message": "Splendid Bookmarks"
+    "message": "Splendid Bookmarks for AI Agents"
   },
   "extensionDescription": {
     "message": "コーディングエージェントからブックマークを検索・移動・改名。Dry Run、バックアップ検証、ロールバックで整理を支援します。"
   },
   "actionTitle": {
-    "message": "Splendid Bookmarks"
+    "message": "Splendid Bookmarks for AI Agents"
   }
 }

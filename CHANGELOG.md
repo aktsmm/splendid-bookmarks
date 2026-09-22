@@ -1,7 +1,25 @@
 # Changelog
 
-Splendid Bookmarks の変更履歴です。書式は [Keep a Changelog](https://keepachangelog.com/ja/1.1.0/) に、
+Splendid Bookmarks for AI Agents の変更履歴です。書式は [Keep a Changelog](https://keepachangelog.com/ja/1.1.0/) に、
 バージョンは [Semantic Versioning](https://semver.org/lang/ja/) に従います。
+
+## [0.7.0] - 2026-09-22
+
+### 追加
+
+- `preparePlan` APIを追加。snapshot、scope、移動元ID・移動先ID・理由から、拡張機能がタイトル・URL・パス・操作IDを補完し、既存の計画読込とDry Runを1呼出しで実行
+- 古いsnapshot、変更・消失したscope、範囲外、不明ID、不適切な移動先、同期境界不明、重複、干渉、no-opを提案全体として拒否する契約と回帰テストを追加
+
+### 変更
+
+- 表示名を「Splendid Bookmarks for AI Agents」に統一。管理画面、popup、toolbar、日英locale、README、プライバシーポリシー、ストア原稿・画像を更新
+- 接続指示を既存Playwright CLI / MCP優先、必要時のみCDP接続へ整理。対象・セッション・scope照合後は画面操作の反復ではなく拡張APIを使う日英手順へ短縮
+- 同じ合成提案で準備呼出しを2回から1回へ削減。JSON入力359→156 bytes、応答合計1010→768 bytesを実測。実トークン削減率は未測定
+
+### 修正
+
+- 計画読込中にsnapshotまたはscopeが変わった場合、拒否した提案の計画を残さず、別のUI読込で置き換わった計画は保持するよう修正
+- schema不正または読込失敗の計画で`planDigest`だけが残らないよう、digestを受理済み計画にのみ設定
 
 ## [0.6.0] - 2026-09-22
 

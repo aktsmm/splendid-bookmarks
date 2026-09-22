@@ -12,7 +12,7 @@
 import { createInterface } from "node:readline/promises";
 import assert from "node:assert/strict";
 import { randomUUID } from "node:crypto";
-import { existsSync, readdirSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, readdirSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { runInventory } from "./bookmark-inventory.mjs";
 
@@ -658,6 +658,90 @@ try {
   record(
     "browser state after rollback",
     `dupA=${afterRollback[0]} (src=${fixtures.src}) dupB=${afterRollback[1]} (src2=${fixtures.src2})`,
+  );
+
+  const compactBefore = await positionsOf([fixtures.keep]);
+  const compactPrepared = await evaluate(`(async () => {
+    const run = (command, input) => window.splendidBookmarks.run(command, input);
+    const refreshed = await run("refreshTree");
+    if (!refreshed.ok) throw new Error(refreshed.error.key);
+    const session = (await run("getSession")).state;
+    return run("preparePlan", { snapshotId: session.snapshotId, scopeFolderId: session.scopeFolderId,
+      moves: [{ bookmarkId: ${JSON.stringify(fixtures.keep)}, destinationFolderId: ${JSON.stringify(fixtures.dest)}, reason: "Compact API round trip" }] });
+  })()`);
+  assert.equal(compactPrepared.state.accepted, true);
+  assert.equal(compactPrepared.state.approvable, true);
+  assert.deepEqual(await positionsOf([fixtures.keep]), compactBefore);
+  const captureCompact = async (name) => {
+    const directory = join(ROOT, "tmp", "agent-ux-captures");
+    mkdirSync(directory, { recursive: true });
+    await evaluate(
+      `document.getElementById("apply-status").scrollIntoView({ block: "center" })`,
+    );
+    const shot = await page.send("Page.captureScreenshot", { format: "png" });
+    writeFileSync(
+      join(directory, `prepare-plan-${name}.png`),
+      Buffer.from(shot.data, "base64"),
+    );
+  };
+  await captureCompact("prepared");
+  const compactExistingFiles = new Set(readdirSync(downloads));
+  await evaluate(`document.getElementById("export-tree").click()`);
+  await waitFor(
+    `document.getElementById("tree-status").dataset.kind === "ok" && document.getElementById("tree-status").textContent.includes("sha256")`,
+    "compact proposal snapshot export",
+  );
+  const compactSnapshot = await new Promise((resolve, reject) => {
+    const deadline = Date.now() + 10000;
+    const inspect = () => {
+      const filename = readdirSync(downloads).find(
+        (name) => !compactExistingFiles.has(name) && name.endsWith(".json"),
+      );
+      if (filename) resolve(join(downloads, filename));
+      else if (Date.now() >= deadline)
+        reject(new Error("compact backup did not reach disk"));
+      else setTimeout(inspect, 100);
+    };
+    inspect();
+  });
+  const compactDoc = await page.send("DOM.getDocument");
+  const compactBackupInput = await page.send("DOM.querySelector", {
+    nodeId: compactDoc.root.nodeId,
+    selector: "#backup-file",
+  });
+  await evaluate(`document.getElementById("backup-file").value = ""`);
+  await page.send("DOM.setFileInputFiles", {
+    nodeId: compactBackupInput.nodeId,
+    files: [compactSnapshot],
+  });
+  await waitFor(
+    `!document.getElementById("apply-moves").disabled`,
+    "compact proposal backup verification",
+  );
+  const compactApplied = await evaluate(
+    `window.splendidBookmarks.run("apply", { planDigest: ${JSON.stringify(compactPrepared.state.planDigest)} })`,
+  );
+  assert.equal(compactApplied.state.mode, "applied");
+  assert.equal(
+    compactApplied.state.journalPlanDigest,
+    compactPrepared.state.planDigest,
+  );
+  assert.equal((await positionsOf([fixtures.keep]))[0].parentId, fixtures.dest);
+  const compactVerified = await evaluate(
+    `window.splendidBookmarks.run("verify")`,
+  );
+  assert.equal(compactVerified.state.verification.ok, true);
+  await captureCompact("verified");
+  const compactRolledBack = await evaluate(
+    `window.splendidBookmarks.run("rollback")`,
+  );
+  assert.equal(compactRolledBack.ok, true);
+  assert.equal(compactRolledBack.state.apply.kind, "ok");
+  assert.deepEqual(await positionsOf([fixtures.keep]), compactBefore);
+  await captureCompact("rolled-back");
+  record(
+    "compact API round trip",
+    "preparePlan made no writes; disk backup verified; digest-bound Apply and Verify succeeded; Rollback restored exact parent/index",
   );
 
   // --- 7.5 rename one bookmark and put the title back -------------------------

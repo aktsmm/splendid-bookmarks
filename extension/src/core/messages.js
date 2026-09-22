@@ -15,10 +15,10 @@ export const MANIFEST_KEYS = [
 
 export const MESSAGES = {
   en: {
-    extensionName: "Splendid Bookmarks",
+    extensionName: "Splendid Bookmarks for AI Agents",
     extensionDescription:
       "Let coding agents search, move and rename your bookmarks, with dry runs, verified backups and rollback.",
-    actionTitle: "Splendid Bookmarks",
+    actionTitle: "Splendid Bookmarks for AI Agents",
 
     "ui.language": "Language",
     "agent.error.superseded":
@@ -521,6 +521,18 @@ export const MESSAGES = {
     "apply.abort.failed": "the batch failed: {message}",
 
     "agent.error.unknownCommand": "that command is not part of this API",
+    "agent.error.proposalInput":
+      "preparePlan needs snapshotId, scopeFolderId (null for all), and 1-200 moves containing bookmarkId, destinationFolderId and a non-empty reason (up to 2048 characters). IDs must be 1-160 characters.",
+    "agent.error.staleProposal":
+      "The proposal snapshot belongs to another session or an older tree. Read the current tree and reconsider the proposal.",
+    "agent.error.proposalScope":
+      "The proposal scope changed, is missing, or does not contain every source. Read the current scope and reconsider the proposal.",
+    "agent.error.proposalSource":
+      "A proposed source is missing or is a protected root. No proposal was loaded.",
+    "agent.error.proposalDestination":
+      "A proposed destination is missing or is not a usable folder. No proposal was loaded.",
+    "agent.error.proposalBoundary":
+      "A synchronization boundary is unknown. The proposal cannot be prepared.",
     "agent.error.inputNotObject": "{command} takes an object, or nothing",
     "agent.error.planDigest":
       "The approved plan digest is invalid or no longer matches. Review and approve the current plan again.",
@@ -591,10 +603,10 @@ export const MESSAGES = {
   },
 
   ja: {
-    extensionName: "Splendid Bookmarks",
+    extensionName: "Splendid Bookmarks for AI Agents",
     extensionDescription:
       "コーディングエージェントからブックマークを検索・移動・改名。Dry Run、バックアップ検証、ロールバックで整理を支援します。",
-    actionTitle: "Splendid Bookmarks",
+    actionTitle: "Splendid Bookmarks for AI Agents",
 
     "ui.language": "表示言語",
     "agent.error.superseded":
@@ -1094,6 +1106,18 @@ export const MESSAGES = {
     "apply.abort.failed": "バッチが失敗しました: {message}",
 
     "agent.error.unknownCommand": "その command はこの API にありません",
+    "agent.error.proposalInput":
+      "preparePlan には snapshotId、scopeFolderId（全体は null）、bookmarkId・destinationFolderId・空でない reason（2048文字以内）を持つ1〜200件の moves が必要です。IDは1〜160文字です。",
+    "agent.error.staleProposal":
+      "提案の snapshot は別セッションまたは古いツリーのものです。現在のツリーを取得し直して提案を見直してください。",
+    "agent.error.proposalScope":
+      "提案の範囲が変更・消失したか、移動元に範囲外の項目があります。現在の範囲を確認して提案を見直してください。",
+    "agent.error.proposalSource":
+      "移動元が存在しないか、保護されたルートです。提案は読み込まれていません。",
+    "agent.error.proposalDestination":
+      "移動先が存在しないか、使用できるフォルダーではありません。提案は読み込まれていません。",
+    "agent.error.proposalBoundary":
+      "同期境界が不明なため、提案を準備できません。",
     "agent.error.inputNotObject": "{command} の引数はオブジェクトか省略です",
     "agent.error.planDigest":
       "承認した計画のダイジェストが不正、または現在の計画と一致しません。計画を再確認して承認し直してください。",

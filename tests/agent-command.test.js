@@ -26,6 +26,7 @@ const EXPECTED_COMMANDS = [
   "getTree",
   "search",
   "listTrash",
+  "preparePlan",
   "loadPlan",
   "dryRun",
   "apply",
@@ -65,6 +66,7 @@ test("capabilities names its own limits and says what it is not", () => {
     structuredResults: true,
     refreshTree: true,
     planBinding: true,
+    preparePlan: true,
   });
   assert.deepEqual(state.notes, {
     applyNeedsHumanBackup: true,
@@ -115,6 +117,57 @@ test("a plan over the operation cap is refused before it is parsed further", () 
   );
 });
 
+test("preparePlan requires exact, bounded proposal inputs before dispatch", () => {
+  const move = {
+    bookmarkId: "200",
+    destinationFolderId: "10",
+    reason: "group",
+  };
+  const input = { snapshotId: "session:1", scopeFolderId: null, moves: [move] };
+  for (const invalid of [
+    {},
+    { ...input, snapshotId: "" },
+    { ...input, snapshotId: "x".repeat(161) },
+    { ...input, scopeFolderId: undefined },
+    { ...input, scopeFolderId: "" },
+    { ...input, moves: [] },
+    { ...input, moves: [null] },
+    { ...input, moves: new Array(1) },
+    ...[
+      { ...move, reason: " " },
+      { ...move, reason: "x".repeat(2049) },
+      { ...move, bookmarkId: 200 },
+      { ...move, destinationFolderId: "" },
+      { ...move, ignored: true },
+    ].map((invalidMove) => ({ ...input, moves: [invalidMove] })),
+  ]) {
+    assert.equal(
+      validateInvocation("preparePlan", invalid).key,
+      "agent.error.proposalInput",
+    );
+  }
+  assert.equal(
+    validateInvocation("preparePlan", { ...input, force: true }).key,
+    "agent.error.unknownField",
+  );
+  assert.equal(
+    validateInvocation("preparePlan", {
+      ...input,
+      moves: new Array(201).fill(move),
+    }).key,
+    "agent.error.tooManyOperations",
+  );
+  assert.equal(
+    validateInvocation("preparePlan", {
+      ...input,
+      moves: new Array(200).fill(move),
+    }).ok,
+    true,
+  );
+  assert.equal(capabilitiesState().limits.maxPrepareMoves, 200);
+  assert.equal(capabilitiesState().limits.maxProposalReasonChars, 2048);
+});
+
 test("accepted invocations are accepted", () => {
   const cases = [
     ["capabilities", undefined],
@@ -125,6 +178,16 @@ test("accepted invocations are accepted", () => {
     ["search", { query: "azure" }],
     ["search", { query: "azure", limit: 1 }],
     ["listTrash", {}],
+    [
+      "preparePlan",
+      {
+        snapshotId: "session:1",
+        scopeFolderId: null,
+        moves: [
+          { bookmarkId: "200", destinationFolderId: "10", reason: "group" },
+        ],
+      },
+    ],
     ["loadPlan", { plan: { version: 2, operations: [] } }],
     ["dryRun", {}],
     ["apply", {}],
@@ -205,11 +268,23 @@ test("every command routes to its own handler, exactly once", async () => {
     exposeAgentApi(handlers);
     for (const name of COMMAND_NAMES) {
       const input =
-        name === "search"
-          ? { query: "x" }
-          : name === "loadPlan"
-            ? { plan: {} }
-            : {};
+        name === "preparePlan"
+          ? {
+              snapshotId: "session:1",
+              scopeFolderId: null,
+              moves: [
+                {
+                  bookmarkId: "200",
+                  destinationFolderId: "10",
+                  reason: "group",
+                },
+              ],
+            }
+          : name === "search"
+            ? { query: "x" }
+            : name === "loadPlan"
+              ? { plan: {} }
+              : {};
       const result = await win.splendidBookmarks.run(name, input);
       assert.equal(result.ok, true, name);
       assert.deepEqual(result.state, { ran: name }, name);

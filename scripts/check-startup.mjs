@@ -98,11 +98,22 @@ try {
         disabled: button.disabled,
         overflow: document.documentElement.scrollWidth > innerWidth,
         prompt: document.getElementById("agent-prompt").value,
-        firstSection: document.querySelector("section").id };
+        firstSection: document.querySelector("section").id,
+        title: document.title, heading: document.querySelector("h1").textContent,
+        manifestName: chrome.runtime.getManifest().name,
+        actionTitle: chrome.runtime.getManifest().action.default_title };
     })()`);
     assert.equal(layout.firstSection, "agent-workspace");
     assert.equal(layout.disabled, false);
     assert.equal(layout.overflow, false);
+    for (const value of [
+      layout.title,
+      layout.heading,
+      layout.manifestName,
+      layout.actionTitle,
+    ]) {
+      assert.equal(value, "Splendid Bookmarks for AI Agents");
+    }
     assert.ok(layout.top >= 0 && layout.bottom < layout.height);
     assert.ok(layout.prompt.includes("sessionId"));
     const shot = await page.send("Page.captureScreenshot", { format: "png" });
@@ -187,9 +198,16 @@ try {
       .sessionId,
   );
   assert.equal(copy.target.cdpUrl, null);
-  const observedSession = (await evaluate(`window.splendidBookmarks.run("getSession")`)).state;
-  const manifest = JSON.parse(readFileSync(join(ROOT, "extension", "manifest.json"), "utf8"));
-  assert.equal(copy.target.browser.family, session.product.startsWith("Edg/") ? "edge" : "chrome");
+  const observedSession = (
+    await evaluate(`window.splendidBookmarks.run("getSession")`)
+  ).state;
+  const manifest = JSON.parse(
+    readFileSync(join(ROOT, "extension", "manifest.json"), "utf8"),
+  );
+  assert.equal(
+    copy.target.browser.family,
+    session.product.startsWith("Edg/") ? "edge" : "chrome",
+  );
   assert.equal(copy.target.browser.source, "browser-self-report");
   assert.equal(copy.target.managerUrl, await evaluate("location.href"));
   assert.equal(copy.target.extensionId, observedSession.extensionId);
@@ -197,10 +215,16 @@ try {
   assert.equal(copy.target.snapshotId, observedSession.snapshotId);
   assert.equal(copy.target.treeDigest, observedSession.treeDigest);
   assert.ok(Number.isFinite(Date.parse(copy.target.treeReadAt)));
-  assert.ok(Date.parse(copy.target.treeReadAt) <= Date.parse(copy.target.contextGeneratedAt));
+  assert.ok(
+    Date.parse(copy.target.treeReadAt) <=
+      Date.parse(copy.target.contextGeneratedAt),
+  );
   assert.equal(copy.target.profileLabel, null);
   assert.equal(copy.target.connectionStatus, "not-checked");
-  assert.deepEqual(copy.target.unavailableFields, ["profileName", "profilePath"]);
+  assert.deepEqual(copy.target.unavailableFields, [
+    "profileName",
+    "profilePath",
+  ]);
   const regenerated = await evaluate(`(() => {
     const locale = document.getElementById("ui-locale");
     locale.value = "en";
@@ -214,8 +238,14 @@ try {
   assert.equal(regenerated.treeReadAt, copy.target.treeReadAt);
   assert.equal(regenerated.treeDigest, copy.target.treeDigest);
   assert.equal(regenerated.snapshotId, copy.target.snapshotId);
-  assert.ok(Date.parse(regenerated.contextGeneratedAt) >= Date.parse(copy.target.contextGeneratedAt));
-  record("automatic handoff facts", "without manual hints: browser, manifest, manager URL, session, snapshot, tree digest and capture time matched; locale regeneration preserves capture time; unknown profile/CDP stays explicit");
+  assert.ok(
+    Date.parse(regenerated.contextGeneratedAt) >=
+      Date.parse(copy.target.contextGeneratedAt),
+  );
+  record(
+    "automatic handoff facts",
+    "without manual hints: browser, manifest, manager URL, session, snapshot, tree digest and capture time matched; locale regeneration preserves capture time; unknown profile/CDP stays explicit",
+  );
   const invalidInputs = await evaluate(`(() => {
     const goal = document.getElementById("agent-goal");
     goal.value = "empty";
@@ -466,6 +496,56 @@ try {
     "metadata-only move plan accepted; detailed Dry Run; Apply blocked without backup; zero bookmark writes",
   );
 
+  const compact = await evaluate(`(async () => {
+    const run = (command, input) => window.splendidBookmarks.run(command, input);
+    const session = (await run("getSession")).state;
+    const tree = (await run("getTree")).state.shown;
+    const bookmark = tree.find((entry) => !entry.isFolder);
+    const folder = tree.find((entry) => entry.isPermanentRoot && entry.boundary === bookmark.boundary && !entry.unmodifiable);
+    const input = { snapshotId: session.snapshotId, scopeFolderId: session.scopeFolderId,
+      moves: [{ bookmarkId: bookmark.id, destinationFolderId: folder.id, reason: "Test proposal" }] };
+    const legacyInput = { plan: { version: 2, operations: [{ opId: "agent-0001", type: "move", bookmarkId: bookmark.id,
+      expectedTitle: bookmark.title, expectedUrl: bookmark.url, currentPath: bookmark.path,
+      destinationPath: folder.path, destinationFolderId: folder.id, reason: "Test proposal", confidence: 1 }] } };
+    const legacyLoaded = await run("loadPlan", legacyInput);
+    const legacyChecked = await run("dryRun");
+    const prepared = await run("preparePlan", input);
+    const stats = await run("getStats");
+    const duplicate = await run("preparePlan", { ...input, moves: [...input.moves, ...input.moves] });
+    const afterRefusal = await run("getStats");
+    const bytes = (value) => new TextEncoder().encode(JSON.stringify(value)).length;
+    await run("refreshTree");
+    const stale = await run("preparePlan", input);
+    return { prepared, legacyChecked, duplicate, stats, afterRefusal, stale, writes: window.__startupProbe.writes,
+      bytes: { legacyInput: bytes(legacyInput), compactInput: bytes(input),
+        legacyOutput: bytes(legacyLoaded) + bytes(legacyChecked), compactOutput: bytes(prepared) } };
+  })()`);
+  assert.equal(compact.prepared.ok, true);
+  assert.equal(compact.prepared.state.accepted, true);
+  assert.equal(compact.prepared.state.approvable, true);
+  assert.deepEqual(
+    compact.prepared.state.rows,
+    compact.legacyChecked.state.rows,
+  );
+  assert.equal(compact.duplicate.state.accepted, false);
+  assert.equal(compact.duplicate.state.rows.length, 2);
+  assert.equal(
+    compact.stats.state.planDigest,
+    compact.afterRefusal.state.planDigest,
+  );
+  assert.equal(compact.stale.error.key, "agent.error.staleProposal");
+  assert.deepEqual(compact.writes, []);
+  assert.deepEqual(compact.bytes, {
+    legacyInput: 359,
+    compactInput: 156,
+    legacyOutput: 1010,
+    compactOutput: 768,
+  });
+  record(
+    "compact proposal",
+    `same fixture and identical Dry Run rows; preparePlan=1 call vs loadPlan+dryRun=2; UTF-8 JSON bytes ${JSON.stringify(compact.bytes)}; actual tokens not measured; zero writes`,
+  );
+
   const execute = promisify(execFile);
   const extensionId = await evaluate("location.host");
   const cliArgs = [
@@ -675,6 +755,45 @@ try {
   record(
     "backup UX",
     "saved snapshot without invalidating plan/tree; backup verification still required; no writes",
+  );
+  await page.send("Emulation.setDeviceMetricsOverride", {
+    width: 280,
+    height: 600,
+    deviceScaleFactor: 1,
+    mobile: false,
+  });
+  const popupUrl = await evaluate(`new URL("popup.html", location.href).href`);
+  for (const locale of ["en", "ja"]) {
+    await evaluate(
+      `localStorage.setItem("agbm.ui-locale", ${JSON.stringify(locale)})`,
+    );
+    await page.send("Page.navigate", { url: popupUrl });
+    await waitFor(
+      `document.readyState === "complete" && document.documentElement.lang === ${JSON.stringify(locale)} && !!document.getElementById("open-manager")`,
+      "localized popup",
+    );
+    const popup = await evaluate(`(() => {
+      const heading = document.querySelector("h1");
+      const button = document.getElementById("open-manager");
+      return { title: document.title, heading: heading.textContent,
+        overflow: document.documentElement.scrollWidth > innerWidth,
+        separated: heading.getBoundingClientRect().bottom <= button.getBoundingClientRect().top,
+        buttonVisible: button.getBoundingClientRect().bottom <= innerHeight };
+    })()`);
+    assert.equal(popup.title, "Splendid Bookmarks for AI Agents");
+    assert.equal(popup.heading, popup.title);
+    assert.equal(popup.overflow, false);
+    assert.equal(popup.separated, true);
+    assert.equal(popup.buttonVisible, true);
+    const shot = await page.send("Page.captureScreenshot", { format: "png" });
+    writeFileSync(
+      join(captures, `popup-${locale}-280.png`),
+      Buffer.from(shot.data, "base64"),
+    );
+  }
+  record(
+    "popup branding",
+    "English/Japanese title and heading match; 280px layout has no overlap or overflow",
   );
   passed = true;
 } finally {

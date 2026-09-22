@@ -1,11 +1,11 @@
 {
   "extensionName": {
-    "message": "Splendid Bookmarks"
+    "message": "Splendid Bookmarks for AI Agents"
   },
   "extensionDescription": {
     "message": "Let coding agents search, move and rename your bookmarks, with dry runs, verified backups and rollback."
   },
   "actionTitle": {
-    "message": "Splendid Bookmarks"
+    "message": "Splendid Bookmarks for AI Agents"
   }
 }

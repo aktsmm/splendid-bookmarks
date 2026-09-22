@@ -1,4 +1,4 @@
-# Chrome Web Store listing copy — Splendid Bookmarks
+# Chrome Web Store listing copy — Splendid Bookmarks for AI Agents
 
 Two locales. The summaries mirror the localized manifest description in the extension
 package; editing this document does not change the live summary. Paste each detailed
@@ -8,7 +8,7 @@ Read this against the build before every submission. It must not claim the exten
 read-only or that it cannot delete bookmarks: it can, from the Trash, after a confirmed
 two-step flow.
 
-This copy targets release 0.6.0. Use it with the matching package; dashboard submission
+This copy targets release 0.7.0. Use it with the matching package; dashboard submission
 and public availability must be verified separately.
 
 ---
@@ -24,7 +24,7 @@ Let coding agents search, move and rename your bookmarks, with dry runs, verifie
 ### Detailed description
 
 ```text
-Splendid Bookmarks is built for coding agents to work with your browser bookmarks.
+Splendid Bookmarks for AI Agents is built for coding agents to work with your browser bookmarks.
 It gives an agent an API to inspect and search the tree, load an organisation plan,
 run a Dry Run, apply changes, verify the result and request rollback.
 
@@ -44,8 +44,9 @@ foreground work. These instructions are not an enforcement boundary for external
 Connected agents read the tree through the API; a context file attachment is not required.
 
 The entry point is window.splendidBookmarks.run(command, input). Commands include
-capabilities, getSession, refreshTree, getStats, getTree, search, listTrash, loadPlan, dryRun, apply,
-verify and rollback. Tree and search results are paginated, with up to 500 entries per
+capabilities, getSession, refreshTree, getStats, getTree, search, listTrash, preparePlan,
+loadPlan, dryRun, apply, verify and rollback. preparePlan turns compact move proposals into
+the same validated plan and Dry Run before Apply. Tree and search results are paginated, with up to 500 entries per
 page. Follow nextCursor to collect the rest. Reloading the tree invalidates older cursors.
 Reads respect the manager's operation locks, and getSession reports the current mode.
 Tree rows include boundary and protection flags. Dry Run and verification return
@@ -114,7 +115,7 @@ local execution journal and Trash recovery ledger. No AI subscription is bundled
 ### 詳細な説明
 
 ```text
-Splendid Bookmarks は、コーディングエージェントからブラウザーのブックマークを操作するための
+Splendid Bookmarks for AI Agents は、コーディングエージェントからブラウザーのブックマークを操作するための
 拡張機能です。専用APIを通じてツリーの確認・検索、整理計画の読み込み、Dry Run、適用、検証、
 ロールバックを行えます。
 
@@ -133,7 +134,8 @@ Splendid Bookmarks は、コーディングエージェントからブラウザ�
 接続済みエージェントはAPIから取得するため、コンテキストJSONの添付は不要です。
 
 操作の入口は window.splendidBookmarks.run(command, input) です。capabilities、getSession、
-refreshTree、getStats、getTree、search、listTrash、loadPlan、dryRun、apply、verify、rollback を利用できます。
+refreshTree、getStats、getTree、search、listTrash、preparePlan、loadPlan、dryRun、apply、verify、rollback を利用できます。
+preparePlanは簡潔な移動提案を、適用前の同じ検証済み計画とDry Runへ変換します。
 ツリー取得と検索は1ページ最大500項目で、nextCursorを使って続きを取得できます。ツリーの
 再読込後は古いcursorを拒否します。読取APIも画面の操作ロックに従い、getSessionで現在の
 実行モードを確認できます。

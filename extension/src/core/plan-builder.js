@@ -4,10 +4,73 @@
  * validation and Dry Run path as a plan file, so the manual route adds an input
  * method and no new trust surface.
  */
-import { isDescendantOf } from "./tree-model.js";
+import {
+  indexById,
+  isDescendantOf,
+  isBoundaryIndeterminate,
+} from "./tree-model.js";
 import { PLAN_VERSION as SCHEMA_PLAN_VERSION } from "./plan-schema.js";
+import { dryRun, STATUS } from "./validator.js";
+import { LocalizedError } from "./errors.js";
+import { validateInvocation } from "./agent-command.js";
 
 const PLAN_VERSION = SCHEMA_PLAN_VERSION;
+
+export function buildPlanFromProposal(
+  input,
+  { entries, snapshotId, scopeFolderId, generatedAt },
+) {
+  const check = validateInvocation("preparePlan", input);
+  if (!check.ok) throw new LocalizedError(check.key, check.params);
+  if (!snapshotId || input.snapshotId !== snapshotId) {
+    throw new LocalizedError("agent.error.staleProposal");
+  }
+  const byId = indexById(entries);
+  const scope = scopeFolderId === null ? null : byId.get(scopeFolderId);
+  if (
+    input.scopeFolderId !== scopeFolderId ||
+    (scopeFolderId !== null && (!scope || !scope.isFolder))
+  ) {
+    throw new LocalizedError("agent.error.proposalScope");
+  }
+  const operations = input.moves.map((move, index) => {
+    const source = byId.get(move.bookmarkId);
+    const destination = byId.get(move.destinationFolderId);
+    if (!source || !movable(source)) {
+      throw new LocalizedError("agent.error.proposalSource");
+    }
+    if (scope && !isDescendantOf(source.id, scope.id, byId)) {
+      throw new LocalizedError("agent.error.proposalScope");
+    }
+    if (!destination || !destination.isFolder || destination.isRoot) {
+      throw new LocalizedError("agent.error.proposalDestination");
+    }
+    if (
+      isBoundaryIndeterminate(source, byId) ||
+      isBoundaryIndeterminate(destination, byId)
+    ) {
+      throw new LocalizedError("agent.error.proposalBoundary");
+    }
+    const built = buildPlanFromSelection({
+      entries,
+      byId,
+      selectedIds: [source.id],
+      destinationFolderId: destination.id,
+      reason: move.reason,
+      generatedAt,
+    });
+    return {
+      ...built.plan.operations[0],
+      opId: `agent-${String(index + 1).padStart(4, "0")}`,
+    };
+  });
+  const plan = { version: PLAN_VERSION, generatedAt, operations };
+  const validation = dryRun(plan, entries);
+  const accepted = validation.rows.every(
+    (item) => item.status === STATUS.MOVABLE,
+  );
+  return { accepted, plan: accepted ? plan : null, ...validation };
+}
 
 function movable(entry) {
   return !entry.isRoot && !entry.isPermanentRoot;

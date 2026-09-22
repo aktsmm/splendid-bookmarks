@@ -19,6 +19,7 @@ import {
 import { LocalizedError } from "./errors.js";
 
 export const AGENT_API_VERSION = 1;
+const MAX_PROPOSAL_REASON_CHARS = 2048;
 
 /**
  * The whole vocabulary, as a literal. Deriving it from the handler map would
@@ -43,6 +44,7 @@ export const COMMAND_NAMES = [
   "getTree",
   "search",
   "listTrash",
+  "preparePlan",
   "loadPlan",
   "dryRun",
   "apply",
@@ -59,6 +61,7 @@ const COMMAND_INPUTS = new Map([
   ["getTree", ["limit", "cursor"]],
   ["search", ["query", "limit", "cursor"]],
   ["listTrash", []],
+  ["preparePlan", ["snapshotId", "scopeFolderId", "moves"]],
   ["loadPlan", ["plan"]],
   ["dryRun", []],
   ["apply", ["planDigest"]],
@@ -144,6 +147,42 @@ export function validateInvocation(command, input) {
     }
   }
 
+  if (command === "preparePlan") {
+    const identifier = (value) =>
+      typeof value === "string" && value.length > 0 && value.length <= 160;
+    if (
+      !identifier(given.snapshotId) ||
+      !(given.scopeFolderId === null || identifier(given.scopeFolderId)) ||
+      !Array.isArray(given.moves) ||
+      given.moves.length === 0
+    ) {
+      return { ok: false, key: "agent.error.proposalInput" };
+    }
+    if (given.moves.length > MAX_BATCH_OPERATIONS) {
+      return {
+        ok: false,
+        key: "agent.error.tooManyOperations",
+        params: { count: given.moves.length, limit: MAX_BATCH_OPERATIONS },
+      };
+    }
+    for (const move of given.moves) {
+      if (
+        !isPlainObject(move) ||
+        Object.keys(move).length !== 3 ||
+        !["bookmarkId", "destinationFolderId", "reason"].every((field) =>
+          Object.hasOwn(move, field),
+        ) ||
+        !identifier(move.bookmarkId) ||
+        !identifier(move.destinationFolderId) ||
+        typeof move.reason !== "string" ||
+        move.reason.trim().length === 0 ||
+        move.reason.length > MAX_PROPOSAL_REASON_CHARS
+      ) {
+        return { ok: false, key: "agent.error.proposalInput" };
+      }
+    }
+  }
+
   if (command === "loadPlan") {
     if (!isPlainObject(given.plan)) {
       return { ok: false, key: "agent.error.planNotObject" };
@@ -221,6 +260,8 @@ export function capabilitiesState() {
       maxPlanOperations: MAX_PLAN_OPERATIONS,
       maxBatchOperations: MAX_BATCH_OPERATIONS,
       maxRows: MAX_RENDERED_ROWS,
+      maxPrepareMoves: MAX_BATCH_OPERATIONS,
+      maxProposalReasonChars: MAX_PROPOSAL_REASON_CHARS,
     },
     features: {
       pagination: true,
@@ -230,6 +271,7 @@ export function capabilitiesState() {
       structuredResults: true,
       refreshTree: true,
       planBinding: true,
+      preparePlan: true,
     },
     // Stated in the descriptor because an agent that discovers the API will not
     // have read the docs.

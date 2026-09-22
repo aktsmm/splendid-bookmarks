@@ -1,5 +1,7 @@
 # Microsoft Edge Add-ons submission draft — Splendid Bookmarks 0.4.0
 
+この文書は0.4.0の履歴です。0.7.0の現行表示名は `Splendid Bookmarks for AI Agents`。次回提出では新しい版の成果物と名称を使い、下記の旧版ZIPや当時の表示名を上書きしません。
+
 Partner Center 提出用。Chrome ウェブストア版は [cws-submit-draft.md](cws-submit-draft.md)、
 掲載文の本体は [cws-listing.md](cws-listing.md) と共通で、そこから貼る。
 

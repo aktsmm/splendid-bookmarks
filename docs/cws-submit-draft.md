@@ -1,12 +1,14 @@
-# Chrome Web Store submission draft — Splendid Bookmarks 0.6.0
+# Chrome Web Store submission draft — Splendid Bookmarks for AI Agents 0.7.0
 
-Paste-ready values for the Developer Dashboard. Every claim here is checked against the
-build; `npm run check:store` fails if the repository drifts from it.
+Paste-ready values for the Developer Dashboard. Version and listing-copy contracts are
+covered by repository tests and `npm run check:store`; artifact size and SHA-256 below are
+recorded from the completed release build and must be rechecked before upload.
 
-Submission artifact: `builds/splendid-bookmarks-v0.6.0.zip` (42 runtime files,
-`manifest.json` at the archive root). Preserve the original 0.4.0 and 0.5.0 artifacts.
+Submission artifact: `builds/splendid-bookmarks-v0.7.0.zip` (42 runtime files,
+123120 bytes, SHA-256 `BB5D74496C52017A114C44C3910074EE0755A8CEF960EE37063B5F32AE214E7B`,
+`manifest.json` at the archive root). Preserve the original 0.4.0, 0.5.0 and 0.6.0 artifacts.
 
-The revised listing copy below describes 0.6.0 capabilities. Verify its dashboard and
+The revised listing copy below describes 0.7.0 capabilities. Verify its dashboard and
 publication state after submission. The short summary comes from the manifest's localized
 description, so changing the source here does not update the live store. See the
 [manifest description reference](https://developer.chrome.com/docs/extensions/reference/manifest/description).
@@ -28,7 +30,7 @@ the public store URL will carry, so it is recorded here rather than looked up ag
 
 | Field                            | Value                                                                   |
 | -------------------------------- | ----------------------------------------------------------------------- |
-| Item name                        | `Splendid Bookmarks`                                                    |
+| Item name                        | `Splendid Bookmarks for AI Agents`                                      |
 | Summary (manifest, 132 char max) | localized `extensionDescription`; reference copy below                  |
 | Detailed description             | see [cws-listing.md](cws-listing.md)                                    |
 | Category                         | `Workflow & Planning`                                                   |
@@ -52,7 +54,7 @@ Let coding agents search, move and rename your bookmarks, with dry runs, verifie
 ### Single purpose
 
 ```text
-Splendid Bookmarks lets coding agents and users organise bookmarks stored in the browser.
+Splendid Bookmarks for AI Agents lets coding agents and users organise bookmarks stored in the browser.
 It reads and searches the tree, accepts move and title-change plans, previews changes,
 and applies, verifies or rolls them back. Its command API and JSON handoff serve the same
 single bookmark-management purpose. The extension performs its operations locally; it

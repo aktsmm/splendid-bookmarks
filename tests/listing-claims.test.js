@@ -136,10 +136,13 @@ test("listing leads with coding-agent operation instead of optional AI", () => {
   const [enSummary, enDescription, jaSummary, jaDescription] = listingBlocks();
   assert.match(enSummary, /^Let coding agents/);
   assert.match(jaSummary, /^コーディングエージェント/);
-  assert.match(enDescription, /^Splendid Bookmarks is built for coding agents/);
+  assert.match(
+    enDescription,
+    /^Splendid Bookmarks for AI Agents is built for coding agents/,
+  );
   assert.match(
     jaDescription,
-    /^Splendid Bookmarks は、コーディングエージェント/,
+    /^Splendid Bookmarks for AI Agents は、コーディングエージェント/,
   );
   for (const summary of [enSummary, jaSummary])
     assert.ok(summary.length <= 132);
@@ -151,6 +154,7 @@ test("listing leads with coding-agent operation instead of optional AI", () => {
       "getTree",
       "search",
       "listTrash",
+      "preparePlan",
       "loadPlan",
       "dryRun",
       "apply",
@@ -246,11 +250,13 @@ test("the product purpose and first-screen copy stay agent-first", () => {
 });
 
 test("submission copy tracks the package version and discloses explicit clipboard writes", () => {
-  const version = JSON.parse(readFileSync(join(root, "package.json"), "utf8")).version;
+  const version = JSON.parse(
+    readFileSync(join(root, "package.json"), "utf8"),
+  ).version;
   const listing = readFileSync(join(root, "docs", "cws-listing.md"), "utf8");
   const draft = readFileSync(join(root, "docs", "cws-submit-draft.md"), "utf8");
   assert.ok(listing.includes(`This copy targets release ${version}.`));
-  assert.ok(draft.includes(`Splendid Bookmarks ${version}`));
+  assert.ok(draft.includes(`Splendid Bookmarks for AI Agents ${version}`));
   assert.ok(draft.includes(`splendid-bookmarks-v${version}.zip`));
   const [, en, , ja] = listingBlocks();
   assert.match(en, /clipboard only when clicked/);

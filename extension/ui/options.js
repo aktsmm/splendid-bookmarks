@@ -60,6 +60,7 @@ import {
 } from "../src/core/agent-command.js";
 import { exposeAgentApi } from "./agent-api.js";
 import {
+  buildPlanFromProposal,
   buildPlanFromSelection,
   selectableEntries,
   selectedEntries,
@@ -1033,12 +1034,14 @@ function renderPlanErrors(errors, target = el("dry-run-result")) {
   );
 }
 
-async function loadPlan(file) {
+async function loadPlan(file, proposalBinding = null) {
   // Selecting a second file while the first is still being read must not let
   // the older result win, and the previous plan must not stay runnable.
   const seq = (state.planSeq += 1);
   state.plan = null;
   state.planDigest = null;
+  state.dryRunRows = null;
+  state.approval = null;
   state.planSource = null;
   state.views.plan = null;
   // A file plan says nothing about the quarantine folder, so the note must not
@@ -1056,9 +1059,10 @@ async function loadPlan(file) {
     const parsed = JSON.parse(raw);
     const validation = validatePlanDocument(parsed);
     if (seq !== state.planSeq) return;
-    state.planDigest = planDigest;
+    if (proposalBinding) assertProposalBinding(proposalBinding);
     if (!validation.ok) {
       state.plan = null;
+      state.planDigest = null;
       applyControlState();
       state.views.plan = () => renderPlanErrors(validation.errors);
       state.views.plan();
@@ -1071,6 +1075,7 @@ async function loadPlan(file) {
       return;
     }
     state.plan = parsed;
+    state.planDigest = planDigest;
     state.planSource = "file";
     state.views.plan = null;
     clear(el("dry-run-result"));
@@ -1087,6 +1092,8 @@ async function loadPlan(file) {
   } catch (error) {
     if (seq !== state.planSeq) return;
     state.plan = null;
+    state.planDigest = null;
+    state.planSource = null;
     state.views.plan = null;
     applyControlState();
     setStatus(
@@ -2511,6 +2518,19 @@ const agentSessionId = globalThis.crypto.randomUUID();
 const agentSnapshotId = () =>
   state.entries === null ? null : `${agentSessionId}:${state.generation}`;
 
+function assertProposalBinding(input) {
+  requireTree();
+  if (input.snapshotId !== agentSnapshotId()) {
+    throw new LocalizedError("agent.error.staleProposal");
+  }
+  if (
+    input.scopeFolderId !== (el("agent-scope").value || null) ||
+    agentScopeMissing()
+  ) {
+    throw new LocalizedError("agent.error.proposalScope");
+  }
+}
+
 // Every handler either reads page state or calls the function a button calls.
 // Nothing here performs a bookmark write of its own.
 exposeAgentApi({
@@ -2522,6 +2542,7 @@ exposeAgentApi({
     loading: state.loading,
     mode: state.mode,
     snapshotId: agentSnapshotId(),
+    scopeFolderId: el("agent-scope").value || null,
     treeDigest: state.treeDigest,
     treeStatus: statusOf("tree-status"),
   }),
@@ -2602,6 +2623,66 @@ exposeAgentApi({
       state: receipt.state,
     })),
   }),
+  preparePlan: async (input) => {
+    const entries = requireTree();
+    requireControl("plan-file");
+    const { plan, ...validation } = buildPlanFromProposal(input, {
+      entries,
+      snapshotId: agentSnapshotId(),
+      scopeFolderId: el("agent-scope").value || null,
+      generatedAt: new Date().toISOString(),
+    });
+    const response = {
+      ...validation,
+      plan: null,
+      planDigest: null,
+      snapshotId: agentSnapshotId(),
+      treeDigest: state.treeDigest,
+      approvable: false,
+    };
+    if (!validation.accepted) return response;
+    const seq = state.planSeq + 1;
+    await loadPlan(
+      new File([JSON.stringify(plan)], "agent-plan.json", {
+        type: "application/json",
+      }),
+      input,
+    );
+    if (seq !== state.planSeq)
+      throw new LocalizedError("agent.error.superseded");
+    try {
+      assertProposalBinding(input);
+    } catch (error) {
+      state.plan = null;
+      state.planDigest = null;
+      state.planSource = null;
+      state.dryRunRows = null;
+      state.approval = null;
+      state.views.plan = null;
+      clear(el("dry-run-result"));
+      setStatus(
+        "plan-status",
+        "plan.status.failed",
+        { message: describeError(t, error) },
+        "error",
+      );
+      applyControlState();
+      throw error;
+    }
+    if (!state.plan)
+      return { ...response, accepted: false, plan: statusOf("plan-status") };
+    requireControl("dry-run");
+    const result = renderDryRun();
+    return {
+      ...result,
+      accepted: validation.accepted,
+      plan: statusOf("plan-status"),
+      planDigest: state.planDigest,
+      snapshotId: agentSnapshotId(),
+      treeDigest: state.treeDigest,
+      approvable: state.dryRunRows !== null,
+    };
+  },
   loadPlan: async ({ plan }) => {
     requireControl("plan-file");
     const seq = state.planSeq + 1;

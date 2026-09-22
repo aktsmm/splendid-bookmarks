@@ -1,4 +1,4 @@
-# Privacy Policy — Splendid Bookmarks
+# Privacy Policy — Splendid Bookmarks for AI Agents
 
 Last updated: 2026-09-22
 

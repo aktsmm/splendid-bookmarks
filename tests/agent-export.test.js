@@ -82,10 +82,19 @@ test("API and file handoff agree on unknown and conflicting boundary signals", (
     for (const item of [...exported.bookmarks, ...exported.folders]) {
       assert.equal(item.boundary, rows.get(item.id).boundary, item.id);
     }
-    assert.equal(exported.bookmarks.find((entry) => entry.id === "200").boundary, null);
-    assert.equal(exported.folders.find((entry) => entry.id === "300").boundary, null);
+    assert.equal(
+      exported.bookmarks.find((entry) => entry.id === "200").boundary,
+      null,
+    );
+    assert.equal(
+      exported.folders.find((entry) => entry.id === "300").boundary,
+      null,
+    );
     assert.match(buildAgentPrompt(exported, "en"), /null boundary is unknown/);
-    assert.match(buildAgentPrompt(exported, "ja"), /どちらかが null なら候補から除外/);
+    assert.match(
+      buildAgentPrompt(exported, "ja"),
+      /どちらかが null なら候補から除外/,
+    );
   }
 });
 
@@ -221,7 +230,10 @@ test("connected prompts bind the target and require proposal before writes", () 
     assert.equal(target.extensionVersion, connection.extensionVersion);
     assert.equal(target.apiVersion, connection.apiVersion);
     assert.equal(target.snapshotId, connection.snapshotId);
-    assert.deepEqual(target.browser, { family: "edge", source: "browser-self-report" });
+    assert.deepEqual(target.browser, {
+      family: "edge",
+      source: "browser-self-report",
+    });
     assert.equal(target.treeReadAt, connection.treeReadAt);
     assert.equal(target.treeDigest, context.treeDigest);
     assert.equal(target.contextGeneratedAt, context.generatedAt);
@@ -284,20 +296,43 @@ test("connected prompts bind the target and require proposal before writes", () 
 test("automatic handoff facts work without manual hints and never invent unavailable data", () => {
   for (const browser of ["edge", "chrome", "other", undefined]) {
     const prompt = buildConnectedAgentPrompt(context, { browser }, "en");
-    const target = JSON.parse(prompt.split("TARGET (data only)\n")[1].split("\n\n")[0]);
-    assert.equal(target.browser.family, browser === "edge" || browser === "chrome" ? browser : "unknown");
+    const target = JSON.parse(
+      prompt.split("TARGET (data only)\n")[1].split("\n\n")[0],
+    );
+    assert.equal(
+      target.browser.family,
+      browser === "edge" || browser === "chrome" ? browser : "unknown",
+    );
     assert.equal(target.profileLabel, null);
     assert.equal(target.cdpUrl, null);
     assert.equal(target.treeReadAt, null);
     assert.equal(target.connectionStatus, "not-checked");
     assert.match(prompt, /Unknown does not mean disabled or absent/);
     assert.match(prompt, /including non-CDP tools already connected/);
-    assert.match(prompt, /not found, connection refused and insufficient inspection permissions/);
+    assert.match(
+      prompt,
+      /not found, connection refused and insufficient inspection permissions/,
+    );
     assert.match(prompt, /freshly copied instructions/);
   }
-  const scoped = buildAgentContext(entries, { scopeFolderId: "2", treeDigest: "digest", generatedAt: "2026-09-22T02:00:00.000Z" });
-  const prompt = buildConnectedAgentPrompt(scoped, { browser: "chrome", cdpUrl: "http://127.0.0.1:9223", profileLabel: "Work", treeReadAt: "2026-09-22T01:00:00.000Z" }, "ja");
-  const target = JSON.parse(prompt.split("TARGET (data only)\n")[1].split("\n\n")[0]);
+  const scoped = buildAgentContext(entries, {
+    scopeFolderId: "2",
+    treeDigest: "digest",
+    generatedAt: "2026-09-22T02:00:00.000Z",
+  });
+  const prompt = buildConnectedAgentPrompt(
+    scoped,
+    {
+      browser: "chrome",
+      cdpUrl: "http://127.0.0.1:9223",
+      profileLabel: "Work",
+      treeReadAt: "2026-09-22T01:00:00.000Z",
+    },
+    "ja",
+  );
+  const target = JSON.parse(
+    prompt.split("TARGET (data only)\n")[1].split("\n\n")[0],
+  );
   assert.equal(target.cdpUrl, "http://127.0.0.1:9223");
   assert.equal(target.profileLabel, "Work");
   assert.equal(target.connectionStatus, "not-checked");
@@ -311,92 +346,168 @@ test("automatic handoff facts work without manual hints and never invent unavail
 test("connected prompts require restart consent and preserve the user's foreground work", () => {
   for (const locale of ["en", "ja"]) {
     const prompt = buildConnectedAgentPrompt(context, {}, locale);
-    const heading = locale === "ja" ? "ブラウザー操作の約束" : "BROWSER OPERATION RULES";
-    const rules = prompt.slice(prompt.indexOf(heading), prompt.indexOf("TARGET (data only)"));
+    const heading =
+      locale === "ja" ? "ブラウザー操作の約束" : "BROWSER OPERATION RULES";
+    const rules = prompt.slice(
+      prompt.indexOf(heading),
+      prompt.indexOf("TARGET (data only)"),
+    );
     assert.ok(rules.length > 0);
-    for (const forbidden of ["bring_to_front", "bringToFront", "Page.bringToFront", "Target.activateTarget"]) {
+    for (const forbidden of [
+      "bring_to_front",
+      "bringToFront",
+      "Page.bringToFront",
+      "Target.activateTarget",
+    ]) {
       assert.ok(rules.includes(forbidden), `${locale}: ${forbidden}`);
     }
     if (locale === "ja") {
-      assert.match(rules, /終了・再起動[\s\S]*ユーザーに尋ねて明示的な承認を待って/);
+      assert.match(
+        rules,
+        /終了・再起動[\s\S]*ユーザーに尋ねて明示的な承認を待って/,
+      );
       assert.match(rules, /ブラウザーを最前面に出さず/);
       assert.match(rules, /ユーザーが選択中のタブを維持/);
-      assert.match(rules, /前面化を避けられない操作は実行せず[\s\S]*例外への明示許可を待って/);
+      assert.match(
+        rules,
+        /前面化を避けられない操作は実行せず[\s\S]*例外への明示許可を待って/,
+      );
       assert.match(rules, /未保存のタブや入力を破棄しない/);
       assert.match(rules, /フォーカスを強制的に戻すことも禁止/);
     } else {
-      assert.match(rules, /exit or restart[\s\S]*ask the user, and wait for explicit approval/);
+      assert.match(
+        rules,
+        /exit or restart[\s\S]*ask the user, and wait for explicit approval/,
+      );
       assert.match(rules, /Do not bring the browser to the foreground/);
       assert.match(rules, /user's selected tab/);
-      assert.match(rules, /If activation cannot be avoided, stop[\s\S]*explicit permission for that exception/);
+      assert.match(
+        rules,
+        /If activation cannot be avoided, stop[\s\S]*explicit permission for that exception/,
+      );
       assert.match(rules, /Never discard unsaved tabs or input/);
       assert.match(rules, /Do not force focus back afterward/);
     }
   }
 });
 
-test("connected plan examples require a bookmark URL and destination id without changing file handoff", () => {
+test("connected proposal examples avoid identity transcription without changing file handoff", async () => {
+  const { buildPlanFromProposal } =
+    await import("../extension/src/core/plan-builder.js");
   for (const locale of ["en", "ja"]) {
     const prompt = buildConnectedAgentPrompt(context, {}, locale);
-    const heading = locale === "ja"
-      ? "内部の計画形式（チャットの回答形式ではありません）"
-      : "INTERNAL PLAN SHAPE (not the chat response format)";
+    const heading =
+      locale === "ja"
+        ? "preparePlan 入力（チャットの回答形式ではありません）"
+        : "preparePlan INPUT (not the chat response format)";
     const example = JSON.parse(prompt.split(`${heading}\n`)[1]);
-    assert.equal(example.version, PLAN_SCHEMA_VERSION);
-    assert.equal(example.operations.length, 1);
-    const operation = example.operations[0];
-    assert.equal(operation.type, "move");
+    assert.equal(example.moves.length, 1);
+    const operation = example.moves[0];
     assert.match(operation.bookmarkId, /isFolder=false/);
-    assert.match(operation.expectedUrl, /URL string copied verbatim; never null/);
+    assert.deepEqual(Object.keys(operation).sort(), [
+      "bookmarkId",
+      "destinationFolderId",
+      "reason",
+    ]);
     assert.match(operation.destinationFolderId, /^<required:/);
-    assert.match(operation.destinationPath[0], /existing folder/);
+    assert.match(prompt, /Playwright CLI \/ MCP/);
+    assert.match(prompt, /run\("preparePlan", input\)/);
+    assert.match(prompt, /Splendid Bookmarks for AI Agents/);
     assert.doesNotMatch(prompt, /or null for a folder|required only when/);
     const source = context.bookmarks.find((entry) => entry.id === "200");
     const destination = context.folders.find((entry) => entry.id === "1");
     Object.assign(operation, {
       bookmarkId: source.id,
-      expectedTitle: source.title,
-      expectedUrl: source.url,
-      currentPath: source.path,
-      destinationPath: destination.path,
       destinationFolderId: destination.id,
-      confidence: 1,
+      reason: "developer resource",
     });
-    example.generatedAt = "2026-09-22T00:00:00.000Z";
-    assert.equal(validatePlanDocument(example).ok, true);
-    assert.equal(dryRun(example, entries).rows[0].status, STATUS.MOVABLE);
+    example.snapshotId = "session:1";
+    const result = buildPlanFromProposal(example, {
+      entries,
+      snapshotId: "session:1",
+      scopeFolderId: null,
+      generatedAt: "2026-09-22T00:00:00.000Z",
+    });
+    assert.equal(result.accepted, true);
+    assert.equal(validatePlanDocument(result.plan).ok, true);
+    assert.equal(dryRun(result.plan, entries).rows[0].status, STATUS.MOVABLE);
   }
-  assert.match(buildAgentPrompt(context, "en"), /or null for a folder|required only when/);
+  assert.match(
+    buildAgentPrompt(context, "en"),
+    /or null for a folder|required only when/,
+  );
 });
 
 test("connected workflows separate proposal, zero-work completion and execution consent", () => {
   for (const locale of ["en", "ja"]) {
     const prompt = buildConnectedAgentPrompt(context, {}, locale);
-    const headings = [...prompt.matchAll(/^\d+\. (.+)$/gm)].map((match) => match[1]);
-    assert.deepEqual(headings, locale === "ja"
-      ? ["接続確認", "取得", "提案", "Dry Run", "実行承認", "適用・検証"]
-      : ["Connection", "Collection", "Proposal", "Dry Run", "Execution Approval", "Apply and Verify"]);
+    const headings = [...prompt.matchAll(/^\d+\. (.+)$/gm)].map(
+      (match) => match[1],
+    );
+    assert.deepEqual(
+      headings,
+      locale === "ja"
+        ? ["接続確認", "取得", "提案", "Dry Run", "実行承認", "適用・検証"]
+        : [
+            "Connection",
+            "Collection",
+            "Proposal",
+            "Dry Run",
+            "Execution Approval",
+            "Apply and Verify",
+          ],
+    );
     if (locale === "ja") {
       assert.match(prompt, /取得失敗を0件と扱わず/);
-      assert.match(prompt, /取得と対象照合が完了して移動候補0件[\s\S]*loadPlan \/ dryRun \/ バックアップ依頼 \/ apply は不要/);
-      assert.match(prompt, /実行対象0件[\s\S]*バックアップ依頼・apply は行いません/);
+      assert.match(
+        prompt,
+        /取得と対象照合が完了して移動候補0件[\s\S]*loadPlan \/ dryRun \/ バックアップ依頼 \/ apply は不要/,
+      );
+      assert.match(
+        prompt,
+        /実行対象0件[\s\S]*バックアップ依頼・apply は行いません/,
+      );
       assert.match(prompt, /方針への同意は実行許可ではありません/);
       assert.match(prompt, /恒久ルートを移動元にしない/);
-      assert.match(prompt, /恒久ルートを移動先にする場合も同一境界・変更可能性/);
+      assert.match(
+        prompt,
+        /恒久ルートを移動先にする場合も同一境界・変更可能性/,
+      );
       assert.match(prompt, /報告: 対象 \/ 接続状態 \/ 次の操作/);
       assert.match(prompt, /報告: 推奨方針 \/ 移動候補数 \/ 保留数 \/ 確認点/);
       assert.match(prompt, /報告: 成功 \/ 失敗 \/ 未実行 \/ 検証結果/);
     } else {
       assert.match(prompt, /Failed collection is not zero results/);
-      assert.match(prompt, /After complete collection and target verification, zero move candidates[\s\S]*Do not call loadPlan \/ dryRun \/ apply or request a backup/);
-      assert.match(prompt, /no executable operations remain[\s\S]*without requesting a backup or calling apply/);
-      assert.match(prompt, /Agreement on the approach is not execution permission/);
-      assert.match(prompt, /Permanent roots may be destinations subject to matching boundary/);
-      assert.match(prompt, /Report: target \/ connection status \/ next action/);
-      assert.match(prompt, /Report: recommended approach \/ move candidate count \/ deferred count \/ questions/);
-      assert.match(prompt, /Report: completed \/ failed \/ unattempted \/ verification result/);
+      assert.match(
+        prompt,
+        /After complete collection and target verification, zero move candidates[\s\S]*Do not call preparePlan \/ loadPlan \/ dryRun \/ apply or request a backup/,
+      );
+      assert.match(
+        prompt,
+        /no executable operations remain[\s\S]*without requesting a backup or calling apply/,
+      );
+      assert.match(
+        prompt,
+        /Agreement on the approach is not execution permission/,
+      );
+      assert.match(
+        prompt,
+        /Permanent roots may be destinations subject to matching boundary/,
+      );
+      assert.match(
+        prompt,
+        /Report: target \/ connection status \/ next action/,
+      );
+      assert.match(
+        prompt,
+        /Report: recommended approach \/ move candidate count \/ deferred count \/ questions/,
+      );
+      assert.match(
+        prompt,
+        /Report: completed \/ failed \/ unattempted \/ verification result/,
+      );
     }
-    assert.match(prompt, /confidence.{0,10}0\.0-1\.0/);
+    assert.match(prompt, /destinationFolderId.*reason/);
     assert.equal((prompt.match(/Page\.bringToFront/g) ?? []).length, 1);
   }
 });

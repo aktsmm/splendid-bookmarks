@@ -96,8 +96,10 @@ test("collector preserves empty root and bookmark titles as data", async () => {
   const { call } = fakeCall((command, result) => {
     if (command === "getTree") {
       result.state.shown = result.state.shown.map((entry) =>
-        entry.id === "0" ? { ...entry, title: "", url: null, path: [] }
-          : entry.id === "1" ? { ...entry, title: "", path: ["Folder", ""] }
+        entry.id === "0"
+          ? { ...entry, title: "", url: null, path: [] }
+          : entry.id === "1"
+            ? { ...entry, title: "", path: ["Folder", ""] }
             : entry,
       );
     }
